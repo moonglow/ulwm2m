@@ -265,7 +265,6 @@ static int lwm2m_create_rd_request( struct t_lwm2m *p )
   
   strcpy( s, "b=" );
   strncat( s, itm.data, itm.size );
-  s[itm.size] = '\0';
   coap_option_add_string( &p->coap, COAP_OPTION_URI_QUERY, s );
 
   /* lifetime in seconds */
