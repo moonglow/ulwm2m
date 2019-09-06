@@ -17,7 +17,7 @@ enum
   POST_RD,
   POST_UPDATE_RD,
   WAIT_RD_ACK,
-  WAIT_SERVER_COMMANDS,
+  WAIT_NOTHING,
 };
 
 int lwm2m_init( struct t_lwm2m *p, struct t_lwm2m_obj *obj_llist, uint8_t *mem, uint16_t size )
@@ -378,9 +378,6 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_item 
   p_item->instance = -1;
   p_item->id = -1;
 
-  if( ( p->coap.type != COAP_TYPE_CON ) && ( p->coap.type != COAP_TYPE_NON ) )
-    return -1;
-  
   /* recognize object path */
   depth = 0;
   for( res = -1; ; )
@@ -441,7 +438,7 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_item 
   {
     case COAP_SET_CODE( COAP_GET ):
       if( is_observe )
-        return LWM2M_OBSERVE;
+        return p_item->p_obj->read ? LWM2M_OBSERVE: -1;
       if( p->coap.size_payload == 0 )
         return p_item->p_obj->read ? LWM2M_READ: -1;
       return -1;
@@ -580,14 +577,14 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
 
   switch( event )
   {
-    case LWM2M_EVENT_TX:
+    case LWM2M_EVENT_IDLE:
       switch( p->state )
       {
         case INIT_CONN:
           res = lwm2m_init_server_connection( p );
           if( res < 0 )
             return -1;
-          p->reg_timestamp = 0;
+          p->reg_timestamp = timestamp;
           p->state = POST_RD;
         /* fall-thru */
         case POST_RD:
@@ -611,7 +608,8 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           regt *= 1000u; /* to mS, use half interval */
           if( (timestamp - p->reg_timestamp ) < (regt/2) )
             break;
-          p->state = p->reg_timestamp ? POST_UPDATE_RD : POST_RD;
+          p->state = ( p->state  == WAIT_RD_ACK )? POST_RD: POST_UPDATE_RD;
+          p->reg_timestamp = timestamp;
         }
         break;
       }
@@ -620,19 +618,26 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
       res = lwm2m_recv_packet( p, 1000 );
       if( res <= 0 )
         break;
-      switch( p->state )
+
+      switch( p->coap.type )
       {
-        case WAIT_RD_ACK:
-          res = lwm2m_process_reg_ack( p );
-          if( res < 0 )
+        case COAP_TYPE_ACK:
+          if( p->state == WAIT_RD_ACK )
           {
-            p->state = POST_RD;
-            break;
+            res = lwm2m_process_reg_ack(p);
+            if(res < 0)
+            {
+              p->state = POST_RD;
+              break;
+            }
+            p->state = WAIT_NOTHING;
           }
-          p->reg_timestamp = timestamp;
-          p->state = WAIT_SERVER_COMMANDS;
-        break;
-        case WAIT_SERVER_COMMANDS:
+          break;
+        case COAP_TYPE_RST:
+          /* cancel observe */
+          break;
+        case COAP_TYPE_CON:
+        case COAP_TYPE_NON:
         {
           struct t_lwm2m_item item = { 0 };
           int offset = 0;
@@ -649,12 +654,15 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
             case LWM2M_WRITE:
               res = lwm2m_tlv_walker(&item, p->coap.p_payload, p->coap.size_payload);
               return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_404_NOT_FOUND: COAP_204_CHANGED );
-            case LWM2M_OBSERVE: /* same for now */
+            case LWM2M_OBSERVE:
+              if( item.p_obj->observe )
+                (void)item.p_obj->observe( &item, LWM2M_OBSERVE_SET );
+              /* fall-thru */
             case LWM2M_READ:
               res = item.p_obj->read( &item );
               if( res < 0 )
                 return lwm2m_server_simple_response( p, COAP_404_NOT_FOUND );
-              
+
               res = lwm2m_init_content_response( p, COAP_TLV_FORMAT );
               if( res < 0 )
                 return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
@@ -684,18 +692,17 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
 
               if( res < 0 )
                 return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
-              
+
               /* update payload size and send */
               p->coap.size_payload = offset;
               return lwm2m_send_coap_msg( p );
             case LWM2M_CREATE:
             case LWM2M_DELETE:
+            default:
               return lwm2m_server_simple_response( p, COAP_405_METHOD_NOT_ALLOWED );
           }
         }
-        break;
       }
-    break;
   }
   return 0;
 }

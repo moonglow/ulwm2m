@@ -54,8 +54,12 @@
 #define LWM2M_ITEM_INST_LIST                 (0xC0DE6)
 #define LWM2M_ITEM_FROM_NETWORK              (0xC0DE7)
 
+#define LWM2M_OBSERVE_SET                    (0x5E7)
+#define LWM2M_OBSERVE_RESET                  (0x9E5E7)
+#define LWM2M_OBSERVE_CHECK                  (0xC4EC3)
+
 #define LWM2M_EVENT_RX                        1
-#define LWM2M_EVENT_TX                        2
+#define LWM2M_EVENT_IDLE                      2
 #define LWM2M_EVENT_RESET                     3
 
 struct t_lwm2m_item
@@ -97,6 +101,7 @@ struct t_lwm2m_obj
   int (*exec)( struct t_lwm2m_item *p );
   int (*create)( struct t_lwm2m_item *p );
   int (*delete)( struct t_lwm2m_item *p );
+  int (*observe)( struct t_lwm2m_item *p, int action );
 };
 
 int lwm2m_init( struct t_lwm2m *p, struct t_lwm2m_obj *obj_llist, uint8_t *mem, uint16_t size );
