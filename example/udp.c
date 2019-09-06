@@ -113,12 +113,12 @@ int udp_send( uint32_t ip, uint16_t port, uint8_t *p, uint16_t size )
   return sendto( udp_socket, (void*)p, size, 0, (struct sockaddr*)&addr, sizeof(addr) );
 }
 
-int udp_recv( uint32_t *ip, uint16_t *port, uint8_t *p, uint16_t size )
+int udp_recv( uint32_t *ip, uint16_t *port, uint8_t *p, uint16_t size, int timeout )
 {
   int res;
   struct sockaddr_in  who = { 0 };
 
-  res = socket_wait_data( udp_socket, 2000 );
+  res = socket_wait_data( udp_socket, timeout );
   if( res <= 0 )
     return -1;
 
