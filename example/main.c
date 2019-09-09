@@ -4,6 +4,7 @@
 #include "object_3303.h"
 #include "object_3341.h"
 #include "udp.h"
+#include <stdlib.h>
 
 static uint32_t udp_ip = 0;
 static uint16_t udp_port = 0;
@@ -17,6 +18,7 @@ const struct t_lwm2m_obj base =
     /* can be changed only by bootstrap server */
     .write = 0,
     .exec = 0,
+    .observe = 0,
 
   .next = (void*)&(const struct t_lwm2m_obj)
   {
@@ -25,6 +27,7 @@ const struct t_lwm2m_obj base =
     .read = server_read,
     .write = server_write,
     .exec = server_exec,
+    .observe = 0,
 
   .next = (void*)&(const struct t_lwm2m_obj)
   {
@@ -33,21 +36,26 @@ const struct t_lwm2m_obj base =
     .read = device_read,
     .write = device_write,
     .exec = device_exec,
+    .observe = 0,
 
   .next = (void*) &(const struct t_lwm2m_obj)
   {
-          .id = 3303,
-          .instances = 1,
-          .read = object_3303_read,
-          .write = object_3303_write,
-          .exec = object_3303_exec,
+    .id = 3303,
+    .instances = 1,
+    .read = object_3303_read,
+    .write = object_3303_write,
+    .exec = object_3303_exec,
+    .observe = object_3303_observe,
+
   .next = (void*) &(const struct t_lwm2m_obj)
   {
-          .id = 3341,
-          .instances = 1,
-          .read = object_3341_read,
-          .write = object_3341_write,
-          .exec = object_3341_exec,
+    .id = 3341,
+    .instances = 1,
+    .read = object_3341_read,
+    .write = object_3341_write,
+    .exec = object_3341_exec,
+    .observe = 0,
+
   }
   }
   }
@@ -56,11 +64,7 @@ const struct t_lwm2m_obj base =
 
 int network_recv( uint8_t *data, int size, int timeout )
 {
-  uint32_t serv_ip = 0;
-  uint16_t serv_port = 0;
-
-  (void)timeout;
-  return udp_recv( &serv_ip, &serv_port, data, size );
+  return udp_recv( 0, 0, data, size, timeout );
 }
 
 int network_send( uint8_t *data, int size )
@@ -85,8 +89,10 @@ int main(int argc, char *argv[])
   (void)argc;
   (void)argv;
 
-  int res, event = LWM2M_EVENT_TX;
+  int res, event = LWM2M_EVENT_IDLE;
   struct t_lwm2m lwm2m;
+
+  srand( udp_timestamp() );
 
   lwm2m_init( &lwm2m, (void*)&base, shared_mem, sizeof( shared_mem ) );
 
@@ -104,7 +110,7 @@ int main(int argc, char *argv[])
     /* just poll for RX data */
     res = lwm2m.recv( 0, 0, 100 );
     if( res < 0 )
-      event = LWM2M_EVENT_TX;
+      event = LWM2M_EVENT_IDLE;
     else if( res == 0 )
       event = LWM2M_EVENT_RX;
   }
