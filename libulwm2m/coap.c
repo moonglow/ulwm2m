@@ -147,7 +147,7 @@ static int coap_option_is_valid( int option )
 		case COAP_OPTION_URI_HOST:
 		case COAP_OPTION_ETAG:
 		case COAP_OPTION_IF_NONE_MATCH:
-    case COAP_OPTION_LWM2M_OBSERVE:
+    case COAP_OPTION_OBSERVE:
 		case COAP_OPTION_URI_PORT:
 		case COAP_OPTION_LOCATION_PATH:
 		case COAP_OPTION_URI_PATH:
@@ -623,7 +623,7 @@ int coap_print_packet( struct t_coap_packet *header )
         sprintf( format, "\tstring: %%.%ds\n", opt.size );
         printf( format, (char*)opt.p_data );
       break;
-      case COAP_OPTION_LWM2M_OBSERVE:
+      case COAP_OPTION_OBSERVE:
       case COAP_OPTION_URI_PORT:
       case COAP_OPTION_MAX_AGE:
       case COAP_OPTION_CONTENT_FORMAT:

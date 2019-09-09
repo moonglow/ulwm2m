@@ -29,7 +29,7 @@
 #define COAP_OPTION_URI_HOST          (3)
 #define COAP_OPTION_ETAG              (4)
 #define COAP_OPTION_IF_NONE_MATCH     (5)
-#define COAP_OPTION_LWM2M_OBSERVE     (6)
+#define COAP_OPTION_OBSERVE           (6)
 #define COAP_OPTION_URI_PORT          (7)
 #define COAP_OPTION_LOCATION_PATH     (8)
 #define COAP_OPTION_URI_PATH          (11)
