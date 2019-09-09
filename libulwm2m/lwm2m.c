@@ -44,25 +44,53 @@ static struct t_lwm2m_obj *lwm2m_find_object( struct t_lwm2m *p, int object_id )
   return (struct t_lwm2m_obj *)0;
 }
 
-char *lwm2m_read_item_string( struct t_lwm2m_item *p, char *p_sz, int max_size )
+static struct t_lwm2m_obj *lwm2m_find_object_by_index( struct t_lwm2m *p, uint8_t ifind )
 {
-  if( p->size >= max_size )
+  struct t_lwm2m_obj *obj;
+  uint8_t object_index = 0;
+
+  for( obj = p->root; obj; obj = obj->next, ++object_index )
+  {
+    if( ifind == object_index )
+      return obj;
+  }
+
+  return (struct t_lwm2m_obj *)0;
+}
+
+static uint8_t lwm2m_find_object_index( struct t_lwm2m *p, struct t_lwm2m_obj *p_obj_src )
+{
+  struct t_lwm2m_obj *obj;
+  uint8_t object_index = 0;
+
+  for( obj = p->root; obj; obj = obj->next, ++object_index )
+  {
+    if( obj == p_obj_src )
+      return object_index;
+  }
+
+  return 0;
+}
+
+char *lwm2m_read_item_string(struct t_lwm2m_data *p_item, char *p_sz, int max_size )
+{
+  if(p_item->size >= max_size )
     return (char*)0;
 
-  memcpy( p_sz, p->data, p->size );
-  p_sz[p->size] = '\0';
+  memcpy(p_sz, p_item->data, p_item->size );
+  p_sz[p_item->size] = '\0';
 
   return p_sz;
 }
 
-uint32_t lwm2m_read_item_int( struct t_lwm2m_item *p )
+uint32_t lwm2m_read_item_int( struct t_lwm2m_data *p_item )
 {
-  uint8_t *data = p->data;
+  uint8_t *data = p_item->data;
 
-  if( p->data_type == LWM2M_ITEM_FROM_NETWORK )
+  if(p_item->data_type == LWM2M_ITEM_FROM_NETWORK )
   {
 #ifndef HOST_IS_BIG_ENDIAN
-    switch( p->size )
+    switch( p_item->size )
     {
       case 4:
         return data[0]<<24u|data[1]<<16|data[2]<<8|data[3];
@@ -79,7 +107,7 @@ uint32_t lwm2m_read_item_int( struct t_lwm2m_item *p )
   }
   else
   {
-    switch(p->size)
+    switch(p_item->size)
     {
 #ifndef HOST_IS_BIG_ENDIAN
       case 4:
@@ -104,7 +132,7 @@ uint32_t lwm2m_read_item_int( struct t_lwm2m_item *p )
   }
 }
 
-float lwm2m_read_item_float( struct t_lwm2m_item *p )
+float lwm2m_read_item_float( struct t_lwm2m_data *p_item )
 {
   union
   {
@@ -113,38 +141,73 @@ float lwm2m_read_item_float( struct t_lwm2m_item *p )
     uint8_t  raw[sizeof(double)];
   }u;
 
-  if( p->size != sizeof(float) && p->size != sizeof(double) )
+  if(p_item->size != sizeof(float) && p_item->size != sizeof(double) )
     return 0.0f;
 
-  for( int i = 0; i < p->size; i++ )
+  for(int i = 0; i < p_item->size; i++ )
   {
 #ifndef HOST_IS_BIG_ENDIAN
-    if( p->data_type == LWM2M_ITEM_FROM_NETWORK )
-      u.raw[i] = ((uint8_t*)p->data)[p->size - 1 - i];
+    if(p_item->data_type == LWM2M_ITEM_FROM_NETWORK )
+      u.raw[i] = ((uint8_t*)p_item->data)[p_item->size - 1 - i];
     else
 #endif
-      u.raw[i] = ((uint8_t*)p->data)[i];
+      u.raw[i] = ((uint8_t*)p_item->data)[i];
   }
 
-  if( p->size == sizeof(double) )
+  if(p_item->size == sizeof(double) )
     return (float)u.db;
 
   return u.fl;
 }
 
+int lwm2m_process_observe_control(struct t_lwm2m_data *parg, struct t_lwm2m_observe_context *p_state, int control, uint32_t timestamp )
+{
+  switch( control )
+  {
+    case LWM2M_OBSERVE_CHECK:
+      if( !p_state->id_mask )
+        break;
+
+      if( ( timestamp - p_state->timestamp ) > p_state->timeout )
+      {
+        p_state->timestamp = timestamp;
+        parg->data_type = LWM2M_ITEM_OBSERVE_TOKEN;
+        parg->data = p_state->token;
+        parg->size = p_state->tkl;
+        return 1;
+      }
+      break;
+    case LWM2M_OBSERVE_RESET:
+      p_state->id_mask = 0;
+      break;
+    case LWM2M_OBSERVE_SET:
+      p_state->timestamp = timestamp;
+      p_state->tkl = parg->size;
+      p_state->id_mask = 1;
+      memcpy( p_state->token, parg->data, parg->size );
+      return 1;
+    case LWM2M_OBSERVE_GET:
+      parg->id = LWM2M_GET_OBSERVE_LIST;
+      parg->data = 0;
+      parg->size = 0;
+      return 1;
+  }
+  return -1;
+}
+
 static int lwm2m_read_object_int( struct t_lwm2m *p, int obj_id, int inst_is, int id, uint32_t *val )
 {
-  struct t_lwm2m_item itm = { .instance = inst_is, .id = id };
+  struct t_lwm2m_data item = { .instance = inst_is, .id = id };
 
-  itm.p_obj = lwm2m_find_object( p, obj_id );
-  if( !itm.p_obj || !itm.p_obj->read )
+  item.p_obj = lwm2m_find_object(p, obj_id );
+  if(!item.p_obj || !item.p_obj->read )
     return -1;
 
-  if( itm.p_obj->read( &itm ) < 0 )
+  if(item.p_obj->read(&item ) < 0 )
     return -1;
 
   if( val )
-    *val = lwm2m_read_item_int( &itm );
+    *val = lwm2m_read_item_int( &item );
 
   return 0;
 }
@@ -152,23 +215,23 @@ static int lwm2m_read_object_int( struct t_lwm2m *p, int obj_id, int inst_is, in
 static int lwm2m_init_server_connection( struct t_lwm2m *p )
 {
   char *s, *e;
-  struct t_lwm2m_item itm = { .instance = 0, .id = LWM2M_SECURITY_SERVER_URI };
+  struct t_lwm2m_data item = { .instance = 0, .id = LWM2M_SECURITY_SERVER_URI };
 
   if( !p->init )
     return 0;
 
-  itm.p_obj = lwm2m_find_object( p, LWM2M_SECURITY_OBJECT );
-  if( !itm.p_obj || !itm.p_obj->read )
+  item.p_obj = lwm2m_find_object(p, LWM2M_SECURITY_OBJECT );
+  if(!item.p_obj || !item.p_obj->read )
     return -1;
   
-  if( itm.p_obj->read( &itm ) < 0 )
+  if(item.p_obj->read(&item ) < 0 )
     return -1;
   
-  if( p->mem_size < (itm.size+1) )
+  if( p->mem_size < (item.size + 1) )
     return -1;
 
-  s = strncpy( (char*)p->mem, itm.data, itm.size );
-  s[itm.size] = '\0';
+  s = strncpy((char*)p->mem, item.data, item.size );
+  s[item.size] = '\0';
   s = strchr( s, '/' );
   if( !s || s[1] != '/' )
     return -1;
@@ -206,10 +269,18 @@ static int lwm2m_send_coap_msg( struct t_lwm2m *p )
   return p->send( p->mem, size );
 }
 
+static void lwm2m_create_transaction_id( struct t_lwm2m *p, uint8_t obj_index )
+{
+  ++p->trans_id;
+  p->trans_id = ((obj_index & 0x0Fu)<<12u) | (p->trans_id & 0xFFFu);
+}
+
 static int lwm2m_create_rd_update( struct t_lwm2m *p )
 {
-  /* create coap link request */
-  coap_init_message( &p->coap, COAP_TYPE_CON, COAP_POST, rand()&0xFFFF );
+  /* create coap link request update */
+  lwm2m_create_transaction_id( p, 0 );
+  coap_init_message( &p->coap, COAP_TYPE_CON, COAP_POST, p->trans_id );
+  coap_set_header_token( &p->coap, (void*)(int32_t[]){ rand() }, 4 );
 
   if( lwm2m_coap_init_options( p, 0 ) < 0 )
     return -1;
@@ -228,16 +299,18 @@ static int lwm2m_create_rd_update( struct t_lwm2m *p )
 static int lwm2m_create_rd_request( struct t_lwm2m *p )
 {
   const int temp_buffer_size = (32);
-  struct t_lwm2m_item itm = { .instance = 0 };
+  struct t_lwm2m_data item = { .instance = 0 };
   char *s;
   int res, size, offset;
 
-  itm.p_obj = lwm2m_find_object( p, LWM2M_SERVER_OBJECT );
-  if( !itm.p_obj || !itm.p_obj->read )
+  item.p_obj = lwm2m_find_object(p, LWM2M_SERVER_OBJECT );
+  if(!item.p_obj || !item.p_obj->read )
     return -1;
 
-  /* create coap link request */
-  coap_init_message( &p->coap, COAP_TYPE_CON, COAP_POST, rand()&0xFFFF );
+  /* create coap link request to resource directory */
+  lwm2m_create_transaction_id( p, 0 );
+  coap_init_message( &p->coap, COAP_TYPE_CON, COAP_POST, p->trans_id );
+  coap_set_header_token( &p->coap, (void*)(int32_t[]){ rand() }, 4 );
 
   /* allocate temporary buffer */
   s = (char*)(p->mem + (p->mem_size - temp_buffer_size) );
@@ -258,22 +331,22 @@ static int lwm2m_create_rd_request( struct t_lwm2m *p )
   coap_option_add_string( &p->coap, COAP_OPTION_URI_QUERY, s );
 
   /* transport binding */
-  itm.id = LWM2M_SERVER_BINDING;
-  res = itm.p_obj->read( &itm );
+  item.id = LWM2M_SERVER_BINDING;
+  res = item.p_obj->read(&item );
   if( res < 0 )
     return -1;
   
   strcpy( s, "b=" );
-  strncat( s, itm.data, itm.size );
+  strncat(s, item.data, item.size );
   coap_option_add_string( &p->coap, COAP_OPTION_URI_QUERY, s );
 
   /* lifetime in seconds */
-  itm.id = LWM2M_SERVER_LIFETIME;
-  res = itm.p_obj->read( &itm );
+  item.id = LWM2M_SERVER_LIFETIME;
+  res = item.p_obj->read(&item );
   if( res < 0 )
     return -1;
 
-  snprintf( s, temp_buffer_size, "lt=%d", lwm2m_read_item_int( &itm ) );
+  snprintf( s, temp_buffer_size, "lt=%d", lwm2m_read_item_int( &item ) );
   coap_option_add_string( &p->coap, COAP_OPTION_URI_QUERY, s );
 
   /* commit options */
@@ -366,13 +439,12 @@ static int lwm2m_process_reg_ack( struct t_lwm2m *p )
   return res;
 }
 
-static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_item *p_item )
+static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_data *p_item )
 {
   struct t_coap_option opt = { 0 };
-  char sz_temp[8];
-  int is_observe = 0, accept = COAP_TLV_FORMAT;
-  int depth = 0;
-  int res;
+  char sz_temp[6];
+  char is_observe = 0, depth;
+  int res, accept = COAP_TLV_FORMAT;
 
   p_item->p_obj = 0;
   p_item->instance = -1;
@@ -390,11 +462,16 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_item 
     {
       case COAP_OPTION_URI_PATH:
         if( !opt.size )
-          return -1;
+          break;
+
         if( sizeof( sz_temp ) <= opt.size )
-          return -1;
+          break;
+
         strncpy( sz_temp, (char*)opt.p_data, opt.size );
         sz_temp[opt.size] = '\0';
+
+        if( sz_temp[0] < '0' || sz_temp[0] > '9' )
+          break;
 
         switch( depth )
         {
@@ -417,7 +494,7 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_item 
       case COAP_OPTION_ACCEPT:
         accept = coap_option_read_int( &opt );
       break;
-      case COAP_OPTION_LWM2M_OBSERVE:
+      case COAP_OPTION_OBSERVE:
         is_observe = 1;
       break;
     }
@@ -464,19 +541,24 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_item 
   return -1;
 }
 
-int lwm2m_init_content_response( struct t_lwm2m *p, int content_format )
+int lwm2m_init_content_response( struct t_lwm2m *p, int type, int is_observe )
 {
   int res, size;
 
   /* old token size */
   size = p->coap.tkl;
-  coap_init_message( &p->coap, COAP_TYPE_ACK, COAP_205_CONTENT, p->coap.mid );
+
+  coap_init_message( &p->coap, type, COAP_205_CONTENT, ( type == COAP_TYPE_ACK ) ? p->coap.mid: p->trans_id );
   coap_set_header_token( &p->coap, p->coap.token, size );
 
   size = p->mem_size - COAP_HEADER_SIZE - p->coap.tkl;
 
   coap_set_option_buffer( &p->coap, p->mem + size, p->mem_size - size );
-  coap_option_add_int( &p->coap, COAP_OPTION_CONTENT_FORMAT, content_format );
+  if( is_observe )
+  {
+    coap_option_add_int(&p->coap, COAP_OPTION_OBSERVE, p->trans_id&0xFFFFFFu );
+  }
+  coap_option_add_int( &p->coap, COAP_OPTION_CONTENT_FORMAT, COAP_TLV_FORMAT );
     
   res = coap_get_option_block_size( &p->coap, 1 );
   if( res < 0 )
@@ -515,11 +597,11 @@ static int lwm2m_recv_packet( struct t_lwm2m *p, int timeout )
   return res;
 }
 
-static int lwm2m_tlv_walker(struct t_lwm2m_item *p, uint8_t *data, int size )
+static int lwm2m_tlv_walker(struct t_lwm2m_data *p_item, uint8_t *data, int size )
 {
   struct t_tlv_item item;
 
-  p->data_type = LWM2M_ITEM_FROM_NETWORK;
+  p_item->data_type = LWM2M_ITEM_FROM_NETWORK;
 
   for (int offset = 0; offset < size;)
   {
@@ -535,21 +617,21 @@ static int lwm2m_tlv_walker(struct t_lwm2m_item *p, uint8_t *data, int size )
         /* TODO: */
         return -1;
       case TLV_RES_INSTANCE:
-        p->instance = item.id;
-        p->data = item.p;
-        p->size = item.size;
-        (void)p->p_obj->write( p );
+        p_item->instance = item.id;
+        p_item->data = item.p;
+        p_item->size = item.size;
+        (void)p_item->p_obj->write(p_item );
         break;
       case TLV_RES_MULTI:
-        p->id = item.id;
-        if(lwm2m_tlv_walker(p, item.p, item.size) < 0 )
+        p_item->id = item.id;
+        if(lwm2m_tlv_walker(p_item, item.p, item.size) < 0 )
           return 0;
         break;
       case TLV_RES_VALUE:
-        p->id = item.id;
-        p->data = item.p;
-        p->size = item.size;
-        (void)p->p_obj->write( p );
+        p_item->id = item.id;
+        p_item->data = item.p;
+        p_item->size = item.size;
+        (void)p_item->p_obj->write(p_item );
         break;
     }
   }
@@ -557,23 +639,104 @@ static int lwm2m_tlv_walker(struct t_lwm2m_item *p, uint8_t *data, int size )
   return 0;
 }
 
-static int lwm2m_tlv_encode_item( struct t_lwm2m_item *p, uint8_t *data, int size )
+static int lwm2m_tlv_encode_item(struct t_lwm2m_data *p_item, uint8_t *data, int size )
 {
   struct t_tlv_item tlv = {
-          .id = p->id,
+          .id = p_item->id,
           .id_type = TLV_RES_VALUE,
-          .size = p->size,
-          .p = p->data,
+          .size = p_item->size,
+          .p = p_item->data,
   };
 
-  tlv.id_type |= (p->data_type == LWM2M_ITEM_BINARY) ? 0 : TLV_H2N;
+  tlv.id_type |= (p_item->data_type == LWM2M_ITEM_BINARY) ? 0 : TLV_H2N;
 
   return _tlv_encode_item( data, size, &tlv );
+}
+
+static int lwm2m_object_provide_content(struct t_lwm2m *p, struct t_lwm2m_data *p_item, int is_response, int is_observe )
+{
+  int res, offset;
+
+  offset = 0;
+  res = p_item->p_obj->read(p_item);
+  if(res < 0)
+    return lwm2m_server_simple_response(p, COAP_404_NOT_FOUND);
+
+  if( !is_response )
+  {
+    lwm2m_create_transaction_id( p, lwm2m_find_object_index(p, p_item->p_obj) );
+  }
+
+  res = lwm2m_init_content_response( p, is_response ? COAP_TYPE_ACK: COAP_TYPE_NON, is_observe );
+  if( res < 0 )
+    return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
+
+  /* read whole object ? */
+  if( p_item->id < 0 )
+  {
+    for( uint16_t *list = (void*)p_item->data, n = p_item->size/sizeof(uint16_t); n; )
+    {
+      p_item->id = list[--n];
+      res = p_item->p_obj->read( p_item );
+      if( res < 0 )
+        continue;
+
+      res = lwm2m_tlv_encode_item( p_item, p->coap.p_payload + offset, p->coap.size_payload - offset );
+      if( res < 0 )
+        break;
+
+      offset += res;
+    }
+  }
+  else
+  {
+    res = lwm2m_tlv_encode_item( p_item, p->coap.p_payload, p->coap.size_payload );
+    offset += res;
+  }
+
+  if( res < 0 )
+    return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
+
+  /* update payload size and send */
+  p->coap.size_payload = offset;
+  return lwm2m_send_coap_msg( p );
+}
+
+static int lwm2m_object_observe_content(struct t_lwm2m *p, struct t_lwm2m_data *p_item, uint32_t timestamp )
+{
+  struct t_lwm2m_obj *p_obj;
+
+  for( p_obj = p->root; p_obj; p_obj = p_obj->next )
+  {
+    if( !p_obj->observe )
+      continue;
+    p_item->p_obj = p_obj;
+
+    /* check observe and return context token */
+    if( p_obj->observe( p_item, LWM2M_OBSERVE_CHECK, timestamp ) <= 0 )
+      continue;
+
+    if( p_item->data_type == LWM2M_ITEM_OBSERVE_TOKEN )
+    {
+      (void) coap_set_header_token(&p->coap, p_item->data, p_item->size);
+    }
+
+    /* get observe list */
+    if( p_obj->observe( p_item, LWM2M_OBSERVE_GET, timestamp ) <= 0 )
+      continue;
+
+
+    (void)lwm2m_object_provide_content( p, p_item, 0, 1 );
+    break;
+  }
+
+  return 0;
 }
 
 int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
 {
   int res;
+  struct t_lwm2m_data item = {0 };
 
   switch( event )
   {
@@ -584,6 +747,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           res = lwm2m_init_server_connection( p );
           if( res < 0 )
             return -1;
+          p->trans_id = 0x0000;
           p->reg_timestamp = timestamp;
           p->state = POST_RD;
         /* fall-thru */
@@ -602,6 +766,10 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
         default:
         {
           uint32_t regt = 0;
+
+          /* check observe data action */
+          (void)lwm2m_object_observe_content( p, &item, timestamp );
+
           res = lwm2m_read_object_int( p, LWM2M_SERVER_OBJECT, 0, LWM2M_SERVER_LIFETIME, &regt );
           if( res < 0 )
             break;
@@ -624,7 +792,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
         case COAP_TYPE_ACK:
           if( p->state == WAIT_RD_ACK )
           {
-            res = lwm2m_process_reg_ack(p);
+            res = lwm2m_process_reg_ack( p );
             if(res < 0)
             {
               p->state = POST_RD;
@@ -635,13 +803,14 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           break;
         case COAP_TYPE_RST:
           /* cancel observe */
+          item.p_obj = lwm2m_find_object_by_index( p, p->coap.mid>>12u );
+          if( item.p_obj )
+          {
+            item.p_obj->observe( &item, LWM2M_OBSERVE_RESET, timestamp );
+          }
           break;
         case COAP_TYPE_CON:
         case COAP_TYPE_NON:
-        {
-          struct t_lwm2m_item item = { 0 };
-          int offset = 0;
-
           res = lwm2m_process_object_command( p, &item );
           if( res < 0 )
             return lwm2m_server_simple_response( p, COAP_405_METHOD_NOT_ALLOWED );
@@ -656,52 +825,20 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
               return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_404_NOT_FOUND: COAP_204_CHANGED );
             case LWM2M_OBSERVE:
               if( item.p_obj->observe )
-                (void)item.p_obj->observe( &item, LWM2M_OBSERVE_SET );
+              {
+                /* save token context */
+                item.data = p->coap.token;
+                item.size = p->coap.tkl;
+                (void) item.p_obj->observe( &item, LWM2M_OBSERVE_SET, timestamp );
+              }
               /* fall-thru */
             case LWM2M_READ:
-              res = item.p_obj->read( &item );
-              if( res < 0 )
-                return lwm2m_server_simple_response( p, COAP_404_NOT_FOUND );
-
-              res = lwm2m_init_content_response( p, COAP_TLV_FORMAT );
-              if( res < 0 )
-                return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
-
-              /* read whole object ? */
-              if( item.id < 0 )
-              {
-                for( uint16_t *list = (void*)item.data, n = item.size/sizeof(uint16_t); n; )
-                {
-                  item.id = list[--n];
-                  res = item.p_obj->read( &item );
-                  if( res < 0 )
-                    continue;
-
-                  res = lwm2m_tlv_encode_item( &item, p->coap.p_payload + offset, p->coap.size_payload - offset );
-                  if( res < 0 )
-                    break;
-
-                  offset += res;
-                }
-              }
-              else
-              {
-                res = lwm2m_tlv_encode_item( &item, p->coap.p_payload, p->coap.size_payload );
-                offset += res;
-              }
-
-              if( res < 0 )
-                return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
-
-              /* update payload size and send */
-              p->coap.size_payload = offset;
-              return lwm2m_send_coap_msg( p );
+              return lwm2m_object_provide_content( p, &item, 1, res == LWM2M_OBSERVE );
             case LWM2M_CREATE:
             case LWM2M_DELETE:
             default:
               return lwm2m_server_simple_response( p, COAP_405_METHOD_NOT_ALLOWED );
           }
-        }
       }
   }
   return 0;
