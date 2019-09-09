@@ -14,7 +14,7 @@ static const uint16_t id_0_list[] =
   LWM2M_SERVER_UPDATE_TRIGGER
 };
 
-int server_read( struct t_lwm2m_item *parg )
+int server_read( struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
@@ -51,7 +51,7 @@ int server_read( struct t_lwm2m_item *parg )
   return 1;
 }
 
-int server_write( struct t_lwm2m_item *parg )
+int server_write( struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
@@ -70,7 +70,7 @@ int server_write( struct t_lwm2m_item *parg )
   }
 }
 
-int server_exec( struct t_lwm2m_item *parg )
+int server_exec( struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
