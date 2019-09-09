@@ -13,12 +13,12 @@
 
 static const uint16_t id_0_list[] =
 {
-        ID_RW_TEXT,
-        ID_RW_X_POS, ID_RW_Y_POS,
-        ID_R_W_MAX, ID_R_H_MAX,
-        ID_E_CLEAR_DISPLAY,
-        ID_RW_BRIGHT_LEVEL, ID_RW_CONTRAST_LEVEL,
-        ID_RW_APP_TYPE
+  ID_RW_TEXT,
+  ID_RW_X_POS, ID_RW_Y_POS,
+  ID_R_W_MAX, ID_R_H_MAX,
+  ID_E_CLEAR_DISPLAY,
+  ID_RW_BRIGHT_LEVEL, ID_RW_CONTRAST_LEVEL,
+  ID_RW_APP_TYPE
 };
 
 static char sz_rw_text[64];
@@ -27,7 +27,7 @@ static const uint8_t screen_w = 80, screen_h = 24;
 static float bright_level, contrast_level;
 static char sz_app_type[16];
 
-int object_3341_read(struct t_lwm2m_item *parg )
+int object_3341_read(struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
@@ -82,7 +82,7 @@ int object_3341_read(struct t_lwm2m_item *parg )
   return 1;
 }
 
-int object_3341_write(struct t_lwm2m_item *parg )
+int object_3341_write(struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
@@ -113,7 +113,7 @@ int object_3341_write(struct t_lwm2m_item *parg )
 }
 
 
-int object_3341_exec(struct t_lwm2m_item *parg )
+int object_3341_exec(struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
