@@ -23,7 +23,7 @@ static const uint16_t id_0_observe_list[] =
   ID_R_SENSOR_VALUE
 };
 
-struct t_lwm2m_observe_context observe_state =  { .timeout = 2000 };
+static struct t_lwm2m_observe_context observe_state =  { .timeout = 2000 };
 
 static float sensor_value, min_value = 100.0f, max_value = 0.0f;
 static const float sensor_min_range = 0.0f, sensor_max_range = 100.0f;

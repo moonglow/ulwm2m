@@ -1,6 +1,7 @@
 #include <object_security.h>
 #include <object_server.h>
 #include <object_device.h>
+#include "object_3300.h"
 #include "object_3303.h"
 #include "object_3341.h"
 #include "udp.h"
@@ -13,7 +14,7 @@ static uint8_t shared_mem[0x100];
 const struct t_lwm2m_obj base = 
 {
     .id = LWM2M_SECURITY_OBJECT,
-    .instances = 1,
+    .instances = LWM2M_SET_INSTANCE( 1 ),
     .read = security_read,
     /* can be changed only by bootstrap server */
     .write = 0,
@@ -23,7 +24,7 @@ const struct t_lwm2m_obj base =
   .next = (void*)&(const struct t_lwm2m_obj)
   {
     .id = LWM2M_SERVER_OBJECT,
-    .instances = 1,
+    .instances = LWM2M_SET_INSTANCE(1),
     .read = server_read,
     .write = server_write,
     .exec = server_exec,
@@ -32,7 +33,7 @@ const struct t_lwm2m_obj base =
   .next = (void*)&(const struct t_lwm2m_obj)
   {
     .id = LWM2M_DEVICE_OBJECT,
-    .instances = 1,
+    .instances = LWM2M_SET_INSTANCE( 1 ),
     .read = device_read,
     .write = device_write,
     .exec = device_exec,
@@ -41,7 +42,7 @@ const struct t_lwm2m_obj base =
   .next = (void*) &(const struct t_lwm2m_obj)
   {
     .id = 3303,
-    .instances = 1,
+    .instances = LWM2M_SET_INSTANCE( 1 ),
     .read = object_3303_read,
     .write = object_3303_write,
     .exec = object_3303_exec,
@@ -50,12 +51,24 @@ const struct t_lwm2m_obj base =
   .next = (void*) &(const struct t_lwm2m_obj)
   {
     .id = 3341,
-    .instances = 1,
+    .instances = LWM2M_SET_INSTANCE( 1 ),
     .read = object_3341_read,
     .write = object_3341_write,
     .exec = object_3341_exec,
     .observe = 0,
 
+  .next = (void*) &(const struct t_lwm2m_obj)
+  {
+
+    .id = 3300,
+    /* 7 instance device */
+    .instances = LWM2M_SET_INSTANCE(7 ),
+    .read = object_3300_read,
+    .write = object_3300_write,
+    .exec = object_3300_exec,
+    .observe = object_3300_observe,
+
+  }
   }
   }
   }

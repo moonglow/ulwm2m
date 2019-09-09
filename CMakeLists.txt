@@ -15,6 +15,7 @@ set( LIBULWM2M_SOURCE
         )
 
 set( LWM2M_CLIENT_DEMO
+        example/object_3300.c
         example/object_3303.c
         example/object_3341.c
         example/main.c

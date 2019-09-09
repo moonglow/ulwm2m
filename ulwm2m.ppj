@@ -38,7 +38,8 @@ ulwm2m.exe: \
 	output\object_security.obj \
 	output\object_server.obj \
 	output\tlv.obj \
-	output\udp.obj
+	output\udp.obj \
+	output\object_3300.obj
 	$(LINK) $(LINKFLAGS) -out:"$@" $**
 
 # 
@@ -131,6 +132,14 @@ output\udp.obj: \
 	example\udp.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
-.EXCLUDEDFILES:
+# 
+# Build object_3300.obj.
+# 
+output\object_3300.obj: \
+	example\object_3300.c \
+	example\object_3300.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
 .SILENT:
+
+.EXCLUDEDFILES:
