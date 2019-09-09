@@ -9,7 +9,7 @@ static char sz_server_uri[48] =
 static uint8_t  bootstrap_server = 0;
 static uint8_t  security_mode = 3; /* no security */
 
-int security_read( struct t_lwm2m_item *parg )
+int security_read( struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
