@@ -15,7 +15,7 @@ static const uint16_t id_0_list[] =
   LWM2M_DEVICE_BINDINDS,
 };
 
-int device_read( struct t_lwm2m_item *parg )
+int device_read( struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
@@ -61,13 +61,13 @@ int device_read( struct t_lwm2m_item *parg )
   return 1;
 }
 
-int device_write( struct t_lwm2m_item *parg )
+int device_write( struct t_lwm2m_data *parg )
 {
   (void)parg;
   return -1;
 }
 
-int device_exec( struct t_lwm2m_item *parg )
+int device_exec( struct t_lwm2m_data *parg )
 {
   switch( parg->id )
   {
@@ -80,13 +80,13 @@ int device_exec( struct t_lwm2m_item *parg )
   return 1;
 }
 
-int device_create( struct t_lwm2m_item *parg )
+int device_create( struct t_lwm2m_data *parg )
 {
   (void)parg;
   return -1;
 }
 
-int device_delete( struct t_lwm2m_item *parg )
+int device_delete( struct t_lwm2m_data *parg )
 {
   (void)parg;
   return -1;
