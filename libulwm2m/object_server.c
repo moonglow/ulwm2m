@@ -2,7 +2,7 @@
 #include "object_server.h"
 
 static uint16_t r_short_server_id = 1;
-uint32_t        rw_lifetime = 120;
+uint32_t        rw_lifetime = 300;
 uint8_t         rw_storing = 0;
 char            rw_binding[4] = "U";
 char            e_reg_update_trigger = 0;
