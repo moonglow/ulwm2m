@@ -4,8 +4,10 @@
 * No dynamic memory allocation
 * Highly portable ( linux/windows/bare-metal )
 * CMake and Pelles C demo project
-* Works with Leshan Lightweight M2M public server
+* Tested with Leshan Lightweight M2M public server
 
-TODO:
+LIMITS:
 * CREATE/DELETE requests not supported
 * No DTLS & bootstrap server support
+* Up to 16 object and up to 16 instances per object
+* No strict protocol implementation
