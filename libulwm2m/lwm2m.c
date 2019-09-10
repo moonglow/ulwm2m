@@ -806,10 +806,10 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           break;
         case COAP_TYPE_RST:
           /* cancel observe */
-          item.p_obj = lwm2m_find_object_by_index( p, p->coap.mid>>12u );
-          if( item.p_obj )
+          item.p_obj = lwm2m_find_object_by_index( p, LWM2M_GET_OBJECT_INDEX_FROM_MID( p->coap.mid ) );
+          if( item.p_obj && item.p_obj->observe )
           {
-            item.instance = (p->coap.mid >> 8u ) & 0x0F;
+            item.instance = LWM2M_GET_OBJECT_INSTANCE_FROM_MID( p->coap.mid );
             item.p_obj->observe( &item, LWM2M_OBSERVE_RESET, timestamp );
           }
           break;
