@@ -1,6 +1,12 @@
+/*********************************************************************\
+* Copyleft (>) 2019 Roman Ilichev <fxdteam@gmail.com>                 *
+*                                                                     *
+* This file is part of uLWM2M project                                 *
+*                             WTFPL LICENSE v2                        *
+\*********************************************************************/
 #include "coap.h"
 
-void *coap_memcpy( void *dst, void *src, int size )
+static void *coap_memcpy( void *dst, void *src, int size )
 {
   uint8_t *d = dst, *s = src;
   for( int i = 0; i < size; i++ )
@@ -11,7 +17,7 @@ void *coap_memcpy( void *dst, void *src, int size )
   return dst;
 }
 
-void *coap_memclear( void *dst, int size )
+static void *coap_memclear( void *dst, int size )
 {
   uint8_t *p = (uint8_t*)dst;
   for( int i = 0; i < size; i++ )
@@ -22,7 +28,7 @@ void *coap_memclear( void *dst, int size )
   return dst;
 }
 
-char* coap_strchr( char *s, int ch )
+static char* coap_strchr( char *s, int ch )
 {
   for( int i = 0; s[i]; i++ )
   {
@@ -32,7 +38,7 @@ char* coap_strchr( char *s, int ch )
   return 0;
 }
 
-int coap_strlen( char *s )
+static int coap_strlen( char *s )
 {
   int len = 0;
 
@@ -45,7 +51,7 @@ int coap_strlen( char *s )
   return len;
 }
 
-char *coap_ltrim( char *s, char *psz_delim )
+static char *coap_ltrim( char *s, char *psz_delim )
 {
   if( !s )
     return 0;

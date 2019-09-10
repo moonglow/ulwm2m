@@ -1,3 +1,9 @@
+/*********************************************************************\
+* Copyleft (>) 2019 Roman Ilichev <fxdteam@gmail.com>                 *
+*                                                                     *
+* This file is part of uLWM2M project                                 *
+*                             WTFPL LICENSE v2                        *
+\*********************************************************************/
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

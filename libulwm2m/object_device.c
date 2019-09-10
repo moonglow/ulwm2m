@@ -1,11 +1,17 @@
+/*********************************************************************\
+* Copyleft (>) 2019 Roman Ilichev <fxdteam@gmail.com>                 *
+*                                                                     *
+* This file is part of uLWM2M project                                 *
+*                             WTFPL LICENSE v2                        *
+\*********************************************************************/
 #include "object_device.h"
 
-const char r_sz_manufacturer[] = "bitbucket.org/moonglow";
-const char r_sz_model[] = "lwm2m C lib";
-const char r_sz_serial[] = "0123456789";
-const char r_sz_fw_version[] = __DATE__;
-uint8_t r_err_codes = 0;
-const char r_sz_bindings[] = "U";
+static const char r_sz_manufacturer[] = "bitbucket.org/moonglow";
+static const char r_sz_model[] = "lwm2m C lib";
+static const char r_sz_serial[] = "0123456789";
+static const char r_sz_fw_version[] = __DATE__;
+static uint8_t r_err_codes = 0;
+static const char r_sz_bindings[] = "U";
 
 static const uint16_t id_0_list[] = 
 {
