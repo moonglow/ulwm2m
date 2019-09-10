@@ -11,4 +11,5 @@ LIMITS:
 * **CREATE**/**DELETE** requests not supported
 * No **DTLS** & **bootstrap** server support
 * Up to **16** object and up to **16** instances per object
+* TLV data encoding scheme only
 * No strict protocol implementation
