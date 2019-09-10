@@ -89,7 +89,7 @@ int network_init( char *psz_host, int port )
 {
   udp_exit();
 
-  udp_init( 3232 );
+  udp_init( 0 );
 
   udp_ip = udp_get_ip( psz_host );
   udp_port = port;

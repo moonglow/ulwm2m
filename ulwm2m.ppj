@@ -32,14 +32,14 @@ ulwm2m.exe: \
 	output\coap.obj \
 	output\lwm2m.obj \
 	output\main.obj \
+	output\object_3300.obj \
 	output\object_3303.obj \
 	output\object_3341.obj \
 	output\object_device.obj \
 	output\object_security.obj \
 	output\object_server.obj \
 	output\tlv.obj \
-	output\udp.obj \
-	output\object_3300.obj
+	output\udp.obj
 	$(LINK) $(LINKFLAGS) -out:"$@" $**
 
 # 
@@ -103,6 +103,7 @@ output\tlv.obj: \
 # 
 output\main.obj: \
 	example\main.c \
+	example\object_3300.h \
 	example\object_3303.h \
 	example\object_3341.h \
 	example\udp.h
@@ -140,6 +141,6 @@ output\object_3300.obj: \
 	example\object_3300.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
-.SILENT:
-
 .EXCLUDEDFILES:
+
+.SILENT:
