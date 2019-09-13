@@ -21,7 +21,7 @@ int _strtoi( const char *s )
   int v = 0;
   char ch;
 
-  while( ( ch = *s++ ) )
+  while( ( ch = *s++ ) != 0 )
   {
     if( ch < '0' || ch > '9' )
       break;

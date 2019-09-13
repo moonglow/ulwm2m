@@ -7,6 +7,7 @@ include_directories( libulwm2m )
 
 set( LIBULWM2M_SOURCE
         libulwm2m/coap.c
+        libulwm2m/utils.c
         libulwm2m/lwm2m.c
         libulwm2m/tlv.c
         libulwm2m/object_security.c

@@ -8,14 +8,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "lwm2m.h"
+#include "utils.h"
 #include "tlv.h"
 
-#define LWM2M_OBSERVE   (100)
-#define LWM2M_READ      (101)
-#define LWM2M_CREATE    (102)
-#define LWM2M_WRITE     (103)
-#define LWM2M_EXEC      (104)
-#define LWM2M_DELETE    (105)
+#define LWM2M_OBSERVE             (100)
+#define LWM2M_READ                (101)
+/* DISCOVER only while bootstrap process */
+#define LWM2M_DISCOVER            (1010)
+#define LWM2M_CREATE              (102)
+#define LWM2M_WRITE               (103)
+#define LWM2M_WRITE_ATTRIBUTES    (1030)
+#define LWM2M_EXEC                (104)
+#define LWM2M_DELETE              (105)
 
 enum
 {
@@ -197,6 +201,14 @@ int lwm2m_process_observe_control(struct t_lwm2m_data *parg, struct t_lwm2m_obse
       parg->data = 0;
       parg->size = 0;
       return 1;
+    case LWM2M_OBSERVE_ATTR_PMIN:
+      p_state->timeout = _strntoi( parg->data, parg->size )*1000;
+      return 1;
+    case LWM2M_OBSERVE_ATTR_PMAX:
+    case LWM2M_OBSERVE_ATTR_GT:
+    case LWM2M_OBSERVE_ATTR_LT:
+    case LWM2M_OBSERVE_ATTR_STEP:
+      return 1;
   }
   return -1;
 }
@@ -249,7 +261,7 @@ static int lwm2m_init_server_connection( struct t_lwm2m *p )
 
   *e++ = '\0';
 
-  if( p->init( s,  atol( e ) ) < 0 )
+  if( p->init( s,  _strtoi( e ) ) < 0 )
     return -1;
 
   return 0;
@@ -448,16 +460,13 @@ static int lwm2m_process_reg_ack( struct t_lwm2m *p )
 static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_data *p_item )
 {
   struct t_coap_option opt = { 0 };
-  char sz_temp[6];
-  char is_observe = 0, depth;
-  int res, accept = COAP_TLV_FORMAT;
+  char is_observe = 0, depth = 0, param_count = 0;
+  int res, format = COAP_TLV_FORMAT;
 
   p_item->p_obj = 0;
   p_item->instance = -1;
   p_item->id = -1;
 
-  /* recognize object path */
-  depth = 0;
   for( res = -1; ; )
   {
     res = coap_read_option( &p->coap, &opt );
@@ -470,48 +479,39 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_data 
         if( !opt.size )
           break;
 
-        if( sizeof( sz_temp ) <= opt.size )
-          break;
-
-        strncpy( sz_temp, (char*)opt.p_data, opt.size );
-        sz_temp[opt.size] = '\0';
-
-        if( sz_temp[0] < '0' || sz_temp[0] > '9' )
+        if( opt.p_data[0] < '0' || opt.p_data[0] > '9' )
           break;
 
         switch( depth )
         {
           case 0:
-            p_item->p_obj = lwm2m_find_object( p, (int)strtol( sz_temp, 0, 10 ) );
+            p_item->p_obj = lwm2m_find_object( p, _strntoi( (char*)opt.p_data, opt.size ) );
             ++depth;
           break;
           case 1:
-            p_item->instance = (int)strtol( sz_temp, 0, 10 );
+            p_item->instance = _strntoi( (char*)opt.p_data, opt.size );
             ++depth;
           break;
           case 2:
-            p_item->id = (int)strtol( sz_temp, 0, 10 );
+            p_item->id = _strntoi( (char*)opt.p_data, opt.size );
             ++depth;
           break;
           default:
             return -1;
         }
       break;
+      case COAP_OPTION_URI_QUERY:
+        ++param_count;
+        break;
+      case COAP_OPTION_CONTENT_FORMAT:
       case COAP_OPTION_ACCEPT:
-        accept = coap_option_read_int( &opt );
+        format = coap_option_read_int( &opt );
       break;
       case COAP_OPTION_OBSERVE:
         is_observe = 1;
       break;
     }
   }
-  
-  if( !depth )
-    return -1;
-
-  /* only TLV for now */ 
-  if( accept != COAP_TLV_FORMAT )
-    return -1;
 
   /* valid object in all cases */
   if( !p_item->p_obj )
@@ -522,15 +522,19 @@ static int lwm2m_process_object_command( struct t_lwm2m *p, struct t_lwm2m_data 
     case COAP_SET_CODE( COAP_GET ):
       if( is_observe )
         return p_item->p_obj->read ? LWM2M_OBSERVE: -1;
-      if( p->coap.size_payload == 0 )
-        return p_item->p_obj->read ? LWM2M_READ: -1;
-      return -1;
+      if( p->coap.size_payload != 0 )
+        return -1;
+      if( format == COAP_APP_LINK_FORMAT )
+          return LWM2M_DISCOVER;
+      /* must accept TLV */
+      return p_item->p_obj->read && (format == COAP_TLV_FORMAT) ? LWM2M_READ : -1;
     case COAP_SET_CODE( COAP_PUT ):
       if( depth < 2 )
         return -1;
       if( p->coap.size_payload == 0 )
-        return -1;
-      return p_item->p_obj->write ? LWM2M_WRITE: -1;
+        return p_item->p_obj->observe && param_count ? LWM2M_WRITE_ATTRIBUTES: -1;
+      /* must provide TLV */
+      return p_item->p_obj->write && ( format == COAP_TLV_FORMAT ) ? LWM2M_WRITE: -1;
     case COAP_SET_CODE( COAP_POST ):
       if( depth == 1 )
         return p_item->p_obj->create ? LWM2M_CREATE : -1;
@@ -659,7 +663,59 @@ static int lwm2m_tlv_encode_item(struct t_lwm2m_data *p_item, uint8_t *data, int
   return _tlv_encode_item( data, size, &tlv );
 }
 
-static int lwm2m_object_provide_content(struct t_lwm2m *p, struct t_lwm2m_data *p_item, int is_response, int is_observe )
+static int lwm2m_object_write_attributes( struct t_lwm2m *p, struct t_lwm2m_data *p_item )
+{
+  struct t_coap_option opt = { 0 };
+  int res;
+
+  for( res = -1; ; )
+  {
+    res = coap_read_option( &p->coap, &opt );
+    if(res < 0 || !res)
+      break;
+
+    if( opt.number != COAP_OPTION_URI_QUERY )
+      continue;
+
+    if( opt.size < 2 || !p_item->p_obj->observe )
+      break;
+
+    p_item->data = 0;
+    p_item->size = 0;
+
+    switch( opt.p_data[0] )
+    {
+      /* pmin, pmax */
+      case 'p':
+        if( opt.size < 4 || opt.p_data[1] != 'm' )
+          return -1;
+        if( opt.size > 4 && opt.p_data[4] == '=' )
+        {
+          p_item->data = opt.p_data + 5;
+          p_item->size = opt.size - 5;
+        }
+        (void)p_item->p_obj->observe( p_item, opt.p_data[2] == 'i' ? LWM2M_OBSERVE_ATTR_PMIN: LWM2M_OBSERVE_ATTR_PMAX, 0 );
+      break;
+      /* lt, gt, st */
+      case 'l':case 'g':case 's':
+        if( opt.p_data[1] != 't' )
+          return -1;
+        if( opt.size > 2 && opt.p_data[2] == '=' )
+        {
+          p_item->data = opt.p_data + 3;
+          p_item->size = opt.size - 3;
+        }
+        (void)p_item->p_obj->observe( p_item, opt.p_data[0] == 'l' ? LWM2M_OBSERVE_ATTR_LT: opt.p_data[0] == 'g' ? LWM2M_OBSERVE_ATTR_GT: LWM2M_OBSERVE_ATTR_STEP, 0 );
+        break;
+      default:
+        return -1;
+    }
+  }
+
+  return 0;
+}
+
+static int lwm2m_object_provide_content( struct t_lwm2m *p, struct t_lwm2m_data *p_item, int is_response, int is_observe )
 {
   int res, offset;
 
@@ -708,7 +764,7 @@ static int lwm2m_object_provide_content(struct t_lwm2m *p, struct t_lwm2m_data *
   return lwm2m_send_coap_msg( p );
 }
 
-static int lwm2m_object_observe_content(struct t_lwm2m *p, struct t_lwm2m_data *p_item, uint32_t timestamp )
+static int lwm2m_object_observe_content( struct t_lwm2m *p, struct t_lwm2m_data *p_item, uint32_t timestamp )
 {
   struct t_lwm2m_obj *p_obj;
 
@@ -830,6 +886,9 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
             case LWM2M_EXEC:
               res = item.p_obj->exec( &item );
               return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_404_NOT_FOUND: COAP_204_CHANGED );
+            case LWM2M_WRITE_ATTRIBUTES:
+              res = lwm2m_object_write_attributes( p, &item );
+              return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_400_BAD_REQUEST: COAP_204_CHANGED );
             case LWM2M_WRITE:
               res = lwm2m_tlv_walker(&item, p->coap.p_payload, p->coap.size_payload);
               return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_404_NOT_FOUND: COAP_204_CHANGED );
@@ -839,13 +898,14 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
                 /* save token context */
                 item.data = p->coap.token;
                 item.size = p->coap.tkl;
-                (void) item.p_obj->observe( &item, LWM2M_OBSERVE_SET, timestamp );
+                (void)item.p_obj->observe( &item, LWM2M_OBSERVE_SET, timestamp );
               }
               /* fall-thru */
             case LWM2M_READ:
               return lwm2m_object_provide_content( p, &item, 1, res == LWM2M_OBSERVE );
             case LWM2M_CREATE:
             case LWM2M_DELETE:
+            case LWM2M_DISCOVER:
             default:
               return lwm2m_server_simple_response( p, COAP_405_METHOD_NOT_ALLOWED );
           }

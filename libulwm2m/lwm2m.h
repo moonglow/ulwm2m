@@ -61,6 +61,11 @@
 #define LWM2M_OBSERVE_GET                    (0x6E7)
 #define LWM2M_OBSERVE_RESET                  (0x9E5E7)
 #define LWM2M_OBSERVE_CHECK                  (0xC4EC3)
+#define LWM2M_OBSERVE_ATTR_PMIN              (0xA701)
+#define LWM2M_OBSERVE_ATTR_PMAX              (0xA702)
+#define LWM2M_OBSERVE_ATTR_GT                (0xA703)
+#define LWM2M_OBSERVE_ATTR_LT                (0xA704)
+#define LWM2M_OBSERVE_ATTR_STEP              (0xA705)
 
 #define LWM2M_EVENT_RX                        1
 #define LWM2M_EVENT_IDLE                      2
