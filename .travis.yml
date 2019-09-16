@@ -1,0 +1,14 @@
+dist: bionic
+language: c
+
+compiler:
+  - gcc
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script:
+  - make
+  

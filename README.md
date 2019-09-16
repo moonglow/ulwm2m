@@ -1,4 +1,5 @@
 # uLWM2M client library in C
+[![Build Status](https://travis-ci.org/moonglow/ulwm2m.svg?branch=master)](https://travis-ci.org/moonglow/ulwm2m)
 
 * Low memory footprint
 * No dynamic memory allocation
