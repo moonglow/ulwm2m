@@ -277,6 +277,10 @@ static int lwm2m_send_coap_msg( struct t_lwm2m *p )
 {
   int size;
 
+#ifdef COAP_DBG_PRINT_PACKET
+  (void)coap_print_packet( &p->coap );
+#endif
+
   if( !p->send )
     return -1;
 
@@ -603,7 +607,9 @@ static int lwm2m_recv_packet( struct t_lwm2m *p, int timeout )
   if( res < 0 )
     return -1;
 
-  coap_print_packet( &p->coap );
+#ifdef COAP_DBG_PRINT_PACKET
+  (void)coap_print_packet( &p->coap );
+#endif
   return res;
 }
 
