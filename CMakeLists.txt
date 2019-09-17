@@ -28,6 +28,10 @@ set( LWM2M_CLIENT_DEMO
 
 add_executable( lwm2m_client ${LWM2M_CLIENT_DEMO} ${LIBULWM2M_SOURCE} )
 
+target_compile_definitions( lwm2m_client PRIVATE
+        COAP_DBG_PRINT_PACKET
+        )
+
 target_compile_options( lwm2m_client PRIVATE
         -Wall
         -Wextra

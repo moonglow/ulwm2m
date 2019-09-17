@@ -16,7 +16,7 @@ AS = poasm.exe#
 RC = porc.exe#
 LINK = polink.exe#
 SIGN = posign.exe#
-CCFLAGS = -std:C11 -Tx86-coff -Os -Ob1 -fp:precise -W1 -Gd -Ze#
+CCFLAGS = -std:C11 -Tx86-coff -Os -Ob1 -fp:precise -W1 -Gd -Ze -DCOAP_DBG_PRINT_PACKET#
 ASFLAGS = -AIA32 -Gd#
 RCFLAGS = #
 LINKFLAGS = -subsystem:console -machine:x86 kernel32.lib advapi32.lib delayimp.lib#
@@ -58,7 +58,8 @@ output\lwm2m.obj: \
 	libulwm2m\lwm2m.c \
 	libulwm2m\coap.h \
 	libulwm2m\lwm2m.h \
-	libulwm2m\tlv.h
+	libulwm2m\tlv.h \
+	libulwm2m\utils.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
 # 
@@ -150,6 +151,6 @@ output\utils.obj: \
 	libulwm2m\utils.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
-.SILENT:
-
 .EXCLUDEDFILES:
+
+.SILENT:
