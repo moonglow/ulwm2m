@@ -146,36 +146,36 @@ uint32_t coap_option_read_int( struct t_coap_option *p )
 
 static int coap_option_is_valid( int option )
 {
-	switch( option )
-	{
-		case COAP_OPTION_RESERVED0:
-		case COAP_OPTION_IF_MATCH:
-		case COAP_OPTION_URI_HOST:
-		case COAP_OPTION_ETAG:
-		case COAP_OPTION_IF_NONE_MATCH:
+  switch( option )
+  {
+    case COAP_OPTION_RESERVED0:
+    case COAP_OPTION_IF_MATCH:
+    case COAP_OPTION_URI_HOST:
+    case COAP_OPTION_ETAG:
+    case COAP_OPTION_IF_NONE_MATCH:
     case COAP_OPTION_OBSERVE:
-		case COAP_OPTION_URI_PORT:
-		case COAP_OPTION_LOCATION_PATH:
-		case COAP_OPTION_URI_PATH:
-		case COAP_OPTION_CONTENT_FORMAT:
-		case COAP_OPTION_MAX_AGE:
-		case COAP_OPTION_URI_QUERY:
-		case COAP_OPTION_ACCEPT:
-		case COAP_OPTION_LOCATION_QUERY:
-		case COAP_OPTION_BLOCK2:
-		case COAP_OPTION_BLOCK1:
-		case COAP_OPTION_SIZE2:
-		case COAP_OPTION_PROXY_URI:
-		case COAP_OPTION_PROXY_SCHEME:
-		case COAP_OPTION_SIZE1:
-		case COAP_OPTION_RESERVED128:
-		case COAP_OPTION_RESERVED132:
-		case COAP_OPTION_RESERVED136:
-		case COAP_OPTION_RESERVED140:
-			return 1;
-	}
-	
-	return 0;
+    case COAP_OPTION_URI_PORT:
+    case COAP_OPTION_LOCATION_PATH:
+    case COAP_OPTION_URI_PATH:
+    case COAP_OPTION_CONTENT_FORMAT:
+    case COAP_OPTION_MAX_AGE:
+    case COAP_OPTION_URI_QUERY:
+    case COAP_OPTION_ACCEPT:
+    case COAP_OPTION_LOCATION_QUERY:
+    case COAP_OPTION_BLOCK2:
+    case COAP_OPTION_BLOCK1:
+    case COAP_OPTION_SIZE2:
+    case COAP_OPTION_PROXY_URI:
+    case COAP_OPTION_PROXY_SCHEME:
+    case COAP_OPTION_SIZE1:
+    case COAP_OPTION_RESERVED128:
+    case COAP_OPTION_RESERVED132:
+    case COAP_OPTION_RESERVED136:
+    case COAP_OPTION_RESERVED140:
+      return 1;
+  }
+  
+  return 0;
 }
 
 int coap_read_option( struct t_coap_packet *header, struct t_coap_option *p )
@@ -666,4 +666,3 @@ int coap_print_packet( struct t_coap_packet *header )
 #else
 int coap_print_packet( struct t_coap_packet *header ){ (void)header; return 0; }
 #endif
-

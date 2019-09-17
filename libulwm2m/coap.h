@@ -1,8 +1,6 @@
 #pragma once
 #include <stdint.h>
 
-#define COAP_DBG_PRINT_PACKET
-
 /* must be confirmed */
 #define COAP_TYPE_CON   (0)
 /* one-way message, no need to confirm */
