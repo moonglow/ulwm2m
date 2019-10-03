@@ -1,5 +1,6 @@
 #pragma once
 #include "coap.h"
+#include "utils.h"
 
 #define LWM2M_VERSION_1_0                0
 #define LWM2M_VERSION_1_1                1
@@ -46,6 +47,7 @@
 #define LWM2M_GET_ID_LIST                     -1
 #define LWM2M_GET_INST_LIST                   -2
 #define LWM2M_GET_OBSERVE_LIST                -3
+#define LWM2M_GET_OBSERVE_STORAGE             -4
 #define LWM2M_ITEM_INT                       (0xC0DE0)
 #define LWM2M_ITEM_UINT                      (0xC0DE1)
 #define LWM2M_ITEM_FLOAT                     (0xC0DE2)
@@ -55,10 +57,11 @@
 #define LWM2M_ITEM_INST_LIST                 (0xC0DE6)
 #define LWM2M_ITEM_FROM_NETWORK              (0xC0DE7)
 #define LWM2M_ITEM_OBSERVE_ID_LIST           (0xC0DE8)
+#define LWM2M_ITEM_OBSERVE_STORAGE           (0xC0DEA)
 #define LWM2M_ITEM_OBSERVE_TOKEN             (0xC0DE9)
 
-#define LWM2M_OBSERVE_SET                    (0x5E7)
-#define LWM2M_OBSERVE_GET                    (0x6E7)
+#define LWM2M_OBSERVE_SET_TOKEN              (0x15E7)
+#define LWM2M_OBSERVE_SET_MID                (0x25E7)
 #define LWM2M_OBSERVE_RESET                  (0x9E5E7)
 #define LWM2M_OBSERVE_CHECK                  (0xC4EC3)
 #define LWM2M_OBSERVE_ATTR_PMIN              (0xA701)
@@ -104,12 +107,12 @@ struct t_lwm2m
   int (*send)( uint8_t *data, int size );
 };
 
-struct t_lwm2m_observe_context
+struct t_lwm2m_observe_storage
 {
-  uint32_t id_mask;
-  uint32_t timestamp;
-  uint32_t timeout;
-  uint8_t  tkl;
+  uint32_t time_start;
+  uint32_t time_interval;
+  uint16_t message_id;
+  uint8_t  token_len;
   uint8_t  token[COAP_MAX_TOKEN];
 };
 
@@ -132,4 +135,4 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp );
 char *lwm2m_read_item_string(struct t_lwm2m_data *p_item, char *p_sz, int max_size );
 uint32_t lwm2m_read_item_int( struct t_lwm2m_data *p_item );
 float lwm2m_read_item_float( struct t_lwm2m_data *p_item );
-int lwm2m_process_observe_control(struct t_lwm2m_data *p_item, struct t_lwm2m_observe_context *p_state, int control, uint32_t timestamp );
+int lwm2m_process_observe_control(struct t_lwm2m_data *p_data, int control, uint32_t arg );

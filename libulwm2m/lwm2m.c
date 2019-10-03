@@ -170,46 +170,89 @@ float lwm2m_read_item_float( struct t_lwm2m_data *p_item )
   return u.fl;
 }
 
-int lwm2m_process_observe_control(struct t_lwm2m_data *parg, struct t_lwm2m_observe_context *p_state, int control, uint32_t timestamp )
+int lwm2m_process_observe_control(struct t_lwm2m_data *p_data, int control, uint32_t arg )
 {
+  struct t_lwm2m_observe_storage *p_storage;
+  struct t_lwm2m_data item = { 0 };
+  int16_t *p_id_list;
+
+  /* set active instance */
+  item.instance = p_data->instance;
+
+  /* request observe storage */
+  item.id = LWM2M_GET_OBSERVE_STORAGE;
+  if( p_data->p_obj->read( &item ) < 0 )
+    return -1;
+
+  p_storage = item.data;
+
+  /* return observe resource list*/
+  item.id = LWM2M_GET_OBSERVE_LIST;
+  if( p_data->p_obj->read( &item ) < 0 )
+    return -1;
+
+  p_id_list = item.data;
+
   switch( control )
   {
     case LWM2M_OBSERVE_CHECK:
-      if( !p_state->id_mask )
-        break;
-
-      if( ( timestamp - p_state->timestamp ) > p_state->timeout )
+      for(int i = 0; i < item.size; i++ )
       {
-        p_state->timestamp = timestamp;
-        parg->data_type = LWM2M_ITEM_OBSERVE_TOKEN;
-        parg->data = p_state->token;
-        parg->size = p_state->tkl;
+        if(!p_storage[i].token_len)
+          continue;
+
+        if((uint32_t)(arg - p_storage[i].time_start) < p_storage[i].time_interval)
+          continue;
+
+        p_storage[i].time_start = arg;
+
+        p_data->data_type = LWM2M_ITEM_OBSERVE_TOKEN;
+        p_data->id = p_id_list[i];
+        p_data->data = p_storage[i].token;
+        p_data->size = p_storage[i].token_len;
         return 1;
       }
       break;
     case LWM2M_OBSERVE_RESET:
-      p_state->id_mask = 0;
+      for( int i = 0; i < item.size; i++ )
+      {
+        if( p_storage[i].message_id == arg )
+        {
+          p_storage[i].message_id = 0;
+          p_storage[i].token_len = 0;
+          return 1;
+        }
+      }
       break;
-    case LWM2M_OBSERVE_SET:
-      p_state->timestamp = timestamp;
-      p_state->tkl = parg->size;
-      p_state->id_mask = 1;
-      memcpy( p_state->token, parg->data, parg->size );
-      return 1;
-    case LWM2M_OBSERVE_GET:
-      parg->id = LWM2M_GET_OBSERVE_LIST;
-      parg->data = 0;
-      parg->size = 0;
-      return 1;
-    case LWM2M_OBSERVE_ATTR_PMIN:
-      p_state->timeout = _strntoi( parg->data, parg->size )*1000;
-      return 1;
-    case LWM2M_OBSERVE_ATTR_PMAX:
-    case LWM2M_OBSERVE_ATTR_GT:
-    case LWM2M_OBSERVE_ATTR_LT:
-    case LWM2M_OBSERVE_ATTR_STEP:
-      return 1;
+    case LWM2M_OBSERVE_SET_TOKEN:
+      for( int i = 0; i < item.size; i++ )
+      {
+        if( p_id_list[i] == p_data->id )
+        {
+          memcpy( p_storage[i].token, p_data->data, p_data->size );
+          p_storage[i].token_len = p_data->size;
+          p_storage[i].time_start = arg;
+          /* set default interval ? */
+          if( !p_storage[i].time_interval )
+            p_storage[i].time_interval = 2000;
+          return 1;
+        }
+      }
+      break;
+    case LWM2M_OBSERVE_SET_MID:
+      for(int i = 0; i < item.size; i++ )
+      {
+        if( p_id_list[i] == p_data->id )
+        {
+          p_storage[i].message_id = arg;
+          return 1;
+        }
+      }
+      break;
+    default:
+      return -1;
   }
+
   return -1;
 }
 
@@ -735,6 +778,11 @@ static int lwm2m_object_provide_content( struct t_lwm2m *p, struct t_lwm2m_data 
     lwm2m_create_transaction_id( p, lwm2m_find_object_index(p, p_item->p_obj), (uint8_t)p_item->instance );
   }
 
+  if( is_observe && p_item->p_obj->observe )
+  {
+    (void)p_item->p_obj->observe( p_item, LWM2M_OBSERVE_SET_MID, p->trans_id );
+  }
+
   res = lwm2m_init_content_response( p, is_response ? COAP_TYPE_ACK: COAP_TYPE_NON, is_observe );
   if( res < 0 )
     return lwm2m_server_simple_response( p, COAP_413_REQUEST_ENTITY_TOO_LARGE );
@@ -742,7 +790,7 @@ static int lwm2m_object_provide_content( struct t_lwm2m *p, struct t_lwm2m_data 
   /* read whole object ? */
   if( p_item->id < 0 )
   {
-    for( uint16_t *list = (void*)p_item->data, n = p_item->size/sizeof(uint16_t); n; )
+    for( uint16_t *list = (void*)p_item->data, n = p_item->size; n; )
     {
       p_item->id = list[--n];
       res = p_item->p_obj->read( p_item );
@@ -793,11 +841,10 @@ static int lwm2m_object_observe_content( struct t_lwm2m *p, struct t_lwm2m_data 
 
       if( p_item->data_type == LWM2M_ITEM_OBSERVE_TOKEN )
       {
-        (void) coap_set_header_token(&p->coap, p_item->data, p_item->size);
+        (void)coap_set_header_token(&p->coap, p_item->data, p_item->size);
       }
 
-      if( p_obj->observe( p_item, LWM2M_OBSERVE_GET, timestamp ) > 0 )
-        return lwm2m_object_provide_content( p, p_item, 0, 1 );
+      return lwm2m_object_provide_content( p, p_item, 0, 1 );
     }
   }
 
@@ -878,7 +925,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           if( item.p_obj && item.p_obj->observe )
           {
             item.instance = LWM2M_GET_OBJECT_INSTANCE_FROM_MID( p->coap.mid );
-            item.p_obj->observe( &item, LWM2M_OBSERVE_RESET, timestamp );
+            item.p_obj->observe( &item, LWM2M_OBSERVE_RESET, p->coap.mid  );
           }
           break;
         case COAP_TYPE_CON:
@@ -896,16 +943,16 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
               res = lwm2m_object_write_attributes( p, &item );
               return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_400_BAD_REQUEST: COAP_204_CHANGED );
             case LWM2M_WRITE:
-              res = lwm2m_tlv_walker(&item, p->coap.p_payload, p->coap.size_payload);
+              res = lwm2m_tlv_walker( &item, p->coap.p_payload, p->coap.size_payload );
               return lwm2m_server_simple_response( p, (res < 0 ) ? COAP_404_NOT_FOUND: COAP_204_CHANGED );
             case LWM2M_OBSERVE:
-              if( item.p_obj->observe )
-              {
-                /* save token context */
-                item.data = p->coap.token;
-                item.size = p->coap.tkl;
-                (void)item.p_obj->observe( &item, LWM2M_OBSERVE_SET, timestamp );
-              }
+              if( !item.p_obj->observe )
+                return lwm2m_server_simple_response( p, COAP_405_METHOD_NOT_ALLOWED );
+              /* save token context */
+              item.data = p->coap.token;
+              item.size = p->coap.tkl;
+              if( item.p_obj->observe( &item, LWM2M_OBSERVE_SET_TOKEN, timestamp ) < 0 )
+                return lwm2m_server_simple_response( p, COAP_404_NOT_FOUND );
               /* fall-thru */
             case LWM2M_READ:
               return lwm2m_object_provide_content( p, &item, 1, res == LWM2M_OBSERVE );

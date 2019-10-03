@@ -13,7 +13,7 @@ static const char r_sz_fw_version[] = __DATE__;
 static uint8_t r_err_codes = 0;
 static const char r_sz_bindings[] = "U";
 
-static const uint16_t id_0_list[] = 
+static const uint16_t id_list[] =
 {
   LWM2M_DEVICE_MANUFACTURER, LWM2M_DEVICE_MODEL_NUMBER,
   LWM2M_DEVICE_SERIAL_NUMBER, LWM2M_DEVICE_FIRMWARE_VERSION,
@@ -21,44 +21,44 @@ static const uint16_t id_0_list[] =
   LWM2M_DEVICE_BINDINDS,
 };
 
-int device_read( struct t_lwm2m_data *parg )
+int device_read( struct t_lwm2m_data *p_data )
 {
-  switch( parg->id )
+  switch( p_data->id )
   {
     case LWM2M_SERVER_SHORT_SERVER_ID:
-      parg->data_type = LWM2M_ITEM_BINARY;
-      parg->size = sizeof( r_sz_manufacturer )-1;
-      parg->data = (void*)r_sz_manufacturer;
+      p_data->data_type = LWM2M_ITEM_BINARY;
+      p_data->size = sizeof( r_sz_manufacturer ) - 1;
+      p_data->data = (void*)r_sz_manufacturer;
       break;
     case LWM2M_DEVICE_MODEL_NUMBER:
-      parg->data_type = LWM2M_ITEM_BINARY;
-      parg->size = sizeof( r_sz_model )-1;
-      parg->data = (void*)r_sz_model;
+      p_data->data_type = LWM2M_ITEM_BINARY;
+      p_data->size = sizeof( r_sz_model ) - 1;
+      p_data->data = (void*)r_sz_model;
       break;
     case LWM2M_DEVICE_SERIAL_NUMBER:
-      parg->data_type = LWM2M_ITEM_BINARY;
-      parg->size = sizeof( r_sz_serial )-1;
-      parg->data = (void*)r_sz_serial;
+      p_data->data_type = LWM2M_ITEM_BINARY;
+      p_data->size = sizeof( r_sz_serial ) - 1;
+      p_data->data = (void*)r_sz_serial;
       break;
     case LWM2M_DEVICE_FIRMWARE_VERSION:
-      parg->data_type = LWM2M_ITEM_BINARY;
-      parg->size = sizeof( r_sz_fw_version )-1;
-      parg->data = (void*)r_sz_fw_version;
+      p_data->data_type = LWM2M_ITEM_BINARY;
+      p_data->size = sizeof( r_sz_fw_version ) - 1;
+      p_data->data = (void*)r_sz_fw_version;
       break;
     case LWM2M_DEVICE_ERROR_CODE:
-      parg->data_type = LWM2M_ITEM_UINT;
-      parg->size = sizeof( r_err_codes );
-      parg->data = &r_err_codes;
+      p_data->data_type = LWM2M_ITEM_UINT;
+      p_data->size = sizeof( r_err_codes );
+      p_data->data = &r_err_codes;
       break;
     case LWM2M_DEVICE_BINDINDS:
-      parg->data_type = LWM2M_ITEM_BINARY;
-      parg->size = sizeof( r_sz_bindings ) - 1;
-      parg->data = (void*)r_sz_bindings;
+      p_data->data_type = LWM2M_ITEM_BINARY;
+      p_data->size = sizeof( r_sz_bindings ) - 1;
+      p_data->data = (void*)r_sz_bindings;
       break;
     case LWM2M_GET_ID_LIST:
-      parg->data_type = LWM2M_ITEM_ID_LIST;
-      parg->data = (void*)id_0_list;
-      parg->size = sizeof( id_0_list );
+      p_data->data_type = LWM2M_ITEM_ID_LIST;
+      p_data->data = (void*)id_list;
+      p_data->size = ARRAY_NELEMS( id_list );
       break;
     default:
       return -1;
@@ -67,15 +67,15 @@ int device_read( struct t_lwm2m_data *parg )
   return 1;
 }
 
-int device_write( struct t_lwm2m_data *parg )
+int device_write( struct t_lwm2m_data *p_data )
 {
-  (void)parg;
+  (void)p_data;
   return -1;
 }
 
-int device_exec( struct t_lwm2m_data *parg )
+int device_exec( struct t_lwm2m_data *p_data )
 {
-  switch( parg->id )
+  switch( p_data->id )
   {
     case LWM2M_DEVICE_REBOOT:
       ;
@@ -86,14 +86,14 @@ int device_exec( struct t_lwm2m_data *parg )
   return 1;
 }
 
-int device_create( struct t_lwm2m_data *parg )
+int device_create( struct t_lwm2m_data *p_data )
 {
-  (void)parg;
+  (void)p_data;
   return -1;
 }
 
-int device_delete( struct t_lwm2m_data *parg )
+int device_delete( struct t_lwm2m_data *p_data )
 {
-  (void)parg;
+  (void)p_data;
   return -1;
 }
