@@ -75,8 +75,6 @@
 #define LWM2M_EVENT_RESET                     3
 
 #define LWM2M_SET_INSTANCE( _x )                    ((1u<<_x)-1u)
-#define LWM2M_GET_OBJECT_INDEX_FROM_MID( _mid )     ((_mid>>12u)&0x0F)
-#define LWM2M_GET_OBJECT_INSTANCE_FROM_MID( _mid )  ((_mid>>8u)&0x0F)
 
 struct t_lwm2m_data
 {
@@ -95,7 +93,6 @@ struct t_lwm2m
   uint32_t reg_timestamp;
   struct t_lwm2m_obj *root;
   uint16_t state;
-  /* ooooiiiiiiiiiiii */
   uint16_t trans_id;
   /* shared mem */
   uint8_t *mem;

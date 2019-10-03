@@ -54,32 +54,29 @@ static struct t_lwm2m_obj *lwm2m_find_object( struct t_lwm2m *p, int object_id )
   return (struct t_lwm2m_obj *)0;
 }
 
-static struct t_lwm2m_obj *lwm2m_find_object_by_index( struct t_lwm2m *p, uint8_t ifind )
+static int lwm2m_resource_observe_reset( struct t_lwm2m *p, struct t_lwm2m_data *p_item, uint16_t mid )
 {
-  struct t_lwm2m_obj *obj;
-  uint8_t object_index = 0;
+  struct t_lwm2m_obj *p_obj;
 
-  for( obj = p->root; obj; obj = obj->next, ++object_index )
+  for( p_obj = p->root; p_obj; p_obj = p_obj->next )
   {
-    if( ifind == object_index )
-      return obj;
+    /* object support observe ? */
+    if( !p_obj->observe )
+      continue;
+
+    p_item->p_obj = p_obj;
+    /* loop over all instance */
+    for( uint8_t i = 0; i < (uint8_t)(sizeof( p_obj->instances )<<3u); i++ )
+    {
+      if( ( p_obj->instances & (1u << i) ) == 0 )
+        break;
+      p_item->instance = i;
+      if( p_obj->observe( p_item, LWM2M_OBSERVE_RESET, mid ) > 0 )
+        return 1;
+    }
   }
 
-  return (struct t_lwm2m_obj *)0;
-}
-
-static uint8_t lwm2m_find_object_index( struct t_lwm2m *p, struct t_lwm2m_obj *p_obj_src )
-{
-  struct t_lwm2m_obj *obj;
-  uint8_t object_index = 0;
-
-  for( obj = p->root; obj; obj = obj->next, ++object_index )
-  {
-    if( obj == p_obj_src )
-      return object_index;
-  }
-
-  return 0;
+  return -1;
 }
 
 char *lwm2m_read_item_string(struct t_lwm2m_data *p_item, char *p_sz, int max_size )
@@ -334,16 +331,11 @@ static int lwm2m_send_coap_msg( struct t_lwm2m *p )
   return p->send( p->mem, size );
 }
 
-static void lwm2m_create_transaction_id( struct t_lwm2m *p, uint8_t obj_index, uint8_t obj_instance  )
-{
-  ++p->trans_id;
-  p->trans_id = ((obj_index & 0x0Fu)<<12u) | ((obj_instance & 0x0Fu)<<8u) | (p->trans_id & 0xFFu);
-}
-
 static int lwm2m_create_rd_update( struct t_lwm2m *p )
 {
   /* create coap link request update */
-  lwm2m_create_transaction_id( p, 0, 0 );
+  ++p->trans_id;
+
   coap_init_message( &p->coap, COAP_TYPE_CON, COAP_POST, p->trans_id );
   coap_set_header_token( &p->coap, (void*)(int32_t[]){ rand() }, 4 );
 
@@ -373,7 +365,7 @@ static int lwm2m_create_rd_request( struct t_lwm2m *p )
     return -1;
 
   /* create coap link request to resource directory */
-  lwm2m_create_transaction_id( p, 0, 0 );
+  ++p->trans_id;
   coap_init_message( &p->coap, COAP_TYPE_CON, COAP_POST, p->trans_id );
   coap_set_header_token( &p->coap, (void*)(int32_t[]){ rand() }, 4 );
 
@@ -441,7 +433,7 @@ static int lwm2m_create_rd_request( struct t_lwm2m *p )
     for( uint8_t i = 0; i < (sizeof( p_obj->instances )<<3u); i++ )
     {
       if( (p_obj->instances&(1<<i)) == 0 )
-        continue;
+        break;
       res = snprintf( s + offset, size - offset, ",</%u/%u>", p_obj->id, i );
       if( res < 0 )
         return -1;
@@ -775,7 +767,7 @@ static int lwm2m_object_provide_content( struct t_lwm2m *p, struct t_lwm2m_data 
 
   if( !is_response )
   {
-    lwm2m_create_transaction_id( p, lwm2m_find_object_index(p, p_item->p_obj), (uint8_t)p_item->instance );
+    ++p->trans_id;
   }
 
   if( is_observe && p_item->p_obj->observe )
@@ -832,7 +824,7 @@ static int lwm2m_object_observe_content( struct t_lwm2m *p, struct t_lwm2m_data 
     for( uint8_t i = 0; i < (sizeof( p_obj->instances )<<3u); i++ )
     {
       if( (p_obj->instances&(1<<i)) == 0 )
-        continue;
+        break;
       p_item->instance = i;
 
       /* check observe and return context token */
@@ -921,12 +913,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           break;
         case COAP_TYPE_RST:
           /* cancel observe */
-          item.p_obj = lwm2m_find_object_by_index( p, LWM2M_GET_OBJECT_INDEX_FROM_MID( p->coap.mid ) );
-          if( item.p_obj && item.p_obj->observe )
-          {
-            item.instance = LWM2M_GET_OBJECT_INSTANCE_FROM_MID( p->coap.mid );
-            item.p_obj->observe( &item, LWM2M_OBSERVE_RESET, p->coap.mid  );
-          }
+          (void)lwm2m_resource_observe_reset( p, &item, p->coap.mid );
           break;
         case COAP_TYPE_CON:
         case COAP_TYPE_NON:
