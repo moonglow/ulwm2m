@@ -665,17 +665,19 @@ static int lwm2m_tlv_walker(struct t_lwm2m_data *p_item, uint8_t *data, int size
     switch (item.id_type)
     {
       case TLV_OBJ_INSTANCE:
-        /* TODO: */
-        return -1;
-      case TLV_RES_INSTANCE:
         p_item->instance = item.id;
+        if( lwm2m_tlv_walker( p_item, item.p, item.size ) < 0 )
+          return 0;
+        break;
+      case TLV_RES_INSTANCE:
+        /* TODO: multi-instance resource ( item.id = resource instance ) */
         p_item->data = item.p;
         p_item->size = item.size;
-        (void)p_item->p_obj->write(p_item );
+        (void)p_item->p_obj->write( p_item );
         break;
       case TLV_RES_MULTI:
         p_item->id = item.id;
-        if(lwm2m_tlv_walker(p_item, item.p, item.size) < 0 )
+        if(lwm2m_tlv_walker( p_item, item.p, item.size ) < 0 )
           return 0;
         break;
       case TLV_RES_VALUE:

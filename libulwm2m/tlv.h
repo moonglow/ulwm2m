@@ -1,9 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-/* object ( id == object id ) */
+/* object ( id == object instance ) */
 #define TLV_OBJ_INSTANCE  (0)
-/* instanced resource value ( id == instance ) */
+/* instanced resource value ( id == resource instance ) */
 #define TLV_RES_INSTANCE  (1)
 /* value with many instance ( id == resource id )*/
 #define TLV_RES_MULTI     (2)
