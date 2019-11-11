@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
+#elif __ICCARM__
+#warning just empty stubs
 #else
 #include <netdb.h>
 #include <sys/types.h>
@@ -19,11 +21,18 @@ static int udp_socket = -1;
 
 static int socket_set_rx_buffer_size( int sd, int size )
 {
+#ifdef __ICCARM__
+  return 0;
+#else
   return setsockopt( sd, SOL_SOCKET, SO_RCVBUF, (char*)&size, sizeof( size ) );
+#endif
 }
 
 int socket_wait_data( int fd, int ms )
 {
+#ifdef __ICCARM__
+  return 0;
+#else
   fd_set rd;
   int res;
   struct timeval tv = { 0 };
@@ -43,10 +52,16 @@ int socket_wait_data( int fd, int ms )
     return -1;
 
   return res;
+#endif
 }
 
 int udp_init( int port )
 {
+#ifdef __ICCARM__
+  (void)udp_socket;
+  (void)socket_set_rx_buffer_size;
+  return 0;
+#else
   struct sockaddr_in src;
   int res;
 
@@ -85,25 +100,35 @@ int udp_init( int port )
   }
 
   return 0;
+#endif
 }
 
 int udp_exit( void )
 {
+#ifndef __ICCARM__
   closesocket( udp_socket );
+#endif
   return 0;
 }
 
 uint32_t udp_get_ip( char *ip )
 {
+#ifdef __ICCARM__
+  return 0;
+#else
   struct hostent *p_h = gethostbyname( ip );
   if( p_h )
     return ((struct in_addr*)p_h->h_addr_list[0])->s_addr;
   else
     return inet_addr( ip );
+#endif
 }
 
 int udp_send( uint32_t ip, uint16_t port, uint8_t *p, uint16_t size )
 {
+#ifdef __ICCARM__
+  return 0;
+#else
   struct sockaddr_in addr = { 0 };
 
   addr.sin_family = AF_INET;
@@ -111,10 +136,14 @@ int udp_send( uint32_t ip, uint16_t port, uint8_t *p, uint16_t size )
   addr.sin_port = htons( port );
 
   return sendto( udp_socket, (void*)p, size, 0, (struct sockaddr*)&addr, sizeof(addr) );
+#endif
 }
 
 int udp_recv( uint32_t *ip, uint16_t *port, uint8_t *p, uint16_t size, int timeout )
 {
+#ifdef __ICCARM__
+  return 0;
+#else
   int res;
   struct sockaddr_in  who = { 0 };
 
@@ -137,12 +166,15 @@ int udp_recv( uint32_t *ip, uint16_t *port, uint8_t *p, uint16_t size, int timeo
     *port = ntohs( who.sin_port );
 
   return res;
+#endif
 }
 
 uint32_t udp_timestamp( void )
 {
 #if _WIN32
   return GetTickCount();
+#elif __ICCARM__
+  return 0;
 #else
   struct timespec ts;
   clock_gettime( CLOCK_MONOTONIC, &ts );

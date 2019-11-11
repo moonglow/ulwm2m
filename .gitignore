@@ -5,3 +5,8 @@
 *.tag
 
 *.exe
+/build
+*.dep
+*.ewd
+*.ewt
+/settings
