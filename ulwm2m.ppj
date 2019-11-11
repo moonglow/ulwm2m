@@ -16,12 +16,12 @@ AS = poasm.exe#
 RC = porc.exe#
 LINK = polink.exe#
 SIGN = posign.exe#
-CCFLAGS = -std:C11 -Tx86-coff -Os -Ob1 -fp:precise -W1 -Gd -Ze -DCOAP_DBG_PRINT_PACKET#
-ASFLAGS = -AIA32 -Gd#
+CCFLAGS = -std:C11 -Tx86-coff -Zi -Ob1 -fp:precise -W1 -Gd -Ze -DWITH_DTLS -DCOAP_DBG_PRINT_PACKET#
+ASFLAGS = -AIA32 -Zi -Gd#
 RCFLAGS = #
-LINKFLAGS = -subsystem:console -machine:x86 kernel32.lib advapi32.lib delayimp.lib#
-SIGNFLAGS = -location:CU -store:MY -timeurl:http://timestamp.verisign.com/scripts/timstamp.dll -errkill#
-INCLUDE = $(PellesCDir)\Include\Win;$(PellesCDir)\Include;libulwm2m#
+LINKFLAGS = -debug -debugtype:both -subsystem:console -machine:x86 kernel32.lib advapi32.lib delayimp.lib#
+SIGNFLAGS = -timeurl:http://timestamp.verisign.com/scripts/timstamp.dll -location:CU -store:MY -errkill#
+INCLUDE = $(PellesCDir)\Include\Win;$(PellesCDir)\Include;libulwm2m;dtls\tinydtls;dtls;example#
 LIB = $(PellesCDir)\Lib\Win;$(PellesCDir)\Lib#
 WizCreator = Pelle Orinius#
 
@@ -40,7 +40,19 @@ ulwm2m.exe: \
 	output\object_server.obj \
 	output\tlv.obj \
 	output\udp.obj \
-	output\utils.obj
+	output\utils.obj \
+	output\dtls.obj \
+	output\dtls-ccm.obj \
+	output\dtls-crypto.obj \
+	output\dtls-hmac.obj \
+	output\dtls-log.obj \
+	output\dtls-peer.obj \
+	output\netq.obj \
+	output\memb.obj \
+	output\rijndael.obj \
+	output\ecc.obj \
+	output\sha2.obj \
+	output\dtls-support.obj
 	$(LINK) $(LINKFLAGS) -out:"$@" $**
 
 # 
@@ -79,7 +91,8 @@ output\object_security.obj: \
 	libulwm2m\object_security.c \
 	libulwm2m\coap.h \
 	libulwm2m\lwm2m.h \
-	libulwm2m\object_security.h
+	libulwm2m\object_security.h \
+	libulwm2m\utils.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
 # 
@@ -151,6 +164,233 @@ output\utils.obj: \
 	libulwm2m\utils.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
-.EXCLUDEDFILES:
+# 
+# Build dtls.obj.
+# 
+output\dtls.obj: \
+	dtls\tinydtls\dtls.c \
+	dtls\dtls-support-conf.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\netq.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build dtls-ccm.obj.
+# 
+output\dtls-ccm.obj: \
+	dtls\tinydtls\dtls-ccm.c \
+	dtls\dtls-support-conf.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build dtls-crypto.obj.
+# 
+output\dtls-crypto.obj: \
+	dtls\tinydtls\dtls-crypto.c \
+	dtls\dtls-support-conf.h \
+	dtls\lib\memb.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\ecc\ecc.h \
+	dtls\tinydtls\netq.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build dtls-hmac.obj.
+# 
+output\dtls-hmac.obj: \
+	dtls\tinydtls\dtls-hmac.c \
+	dtls\dtls-support-conf.h \
+	dtls\lib\memb.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build dtls-log.obj.
+# 
+output\dtls-log.obj: \
+	dtls\tinydtls\dtls-log.c \
+	dtls\dtls-support-conf.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build dtls-peer.obj.
+# 
+output\dtls-peer.obj: \
+	dtls\tinydtls\dtls-peer.c \
+	dtls\dtls-support-conf.h \
+	dtls\lib\memb.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build netq.obj.
+# 
+output\netq.obj: \
+	dtls\tinydtls\netq.c \
+	dtls\dtls-support-conf.h \
+	dtls\lib\memb.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\netq.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build memb.obj.
+# 
+output\memb.obj: \
+	dtls\lib\memb.c \
+	dtls\lib\memb.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build rijndael.obj.
+# 
+output\rijndael.obj: \
+	dtls\tinydtls\aes\rijndael.c \
+	dtls\tinydtls\aes\rijndael.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build ecc.obj.
+# 
+output\ecc.obj: \
+	dtls\tinydtls\ecc\ecc.c \
+	dtls\tinydtls\ecc\ecc.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build sha2.obj.
+# 
+output\sha2.obj: \
+	dtls\tinydtls\sha2\sha2.c \
+	dtls\dtls-support-conf.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\sha2\sha2.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
+
+# 
+# Build dtls-support.obj.
+# 
+output\dtls-support.obj: \
+	dtls\dtls-support.c \
+	dtls\dtls-support-conf.h \
+	dtls\tinydtls\aes\rijndael.h \
+	dtls\tinydtls\dtls.h \
+	dtls\tinydtls\dtls_config.h \
+	dtls\tinydtls\dtls-alert.h \
+	dtls\tinydtls\dtls-ccm.h \
+	dtls\tinydtls\dtls-crypto.h \
+	dtls\tinydtls\dtls-hmac.h \
+	dtls\tinydtls\dtls-log.h \
+	dtls\tinydtls\dtls-log-default.h \
+	dtls\tinydtls\dtls-numeric.h \
+	dtls\tinydtls\dtls-peer.h \
+	dtls\tinydtls\dtls-state.h \
+	dtls\tinydtls\dtls-support.h \
+	dtls\tinydtls\tinydtls.h
+	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
 .SILENT:
+
+.EXCLUDEDFILES:

@@ -273,6 +273,7 @@ static int lwm2m_read_object_int( struct t_lwm2m *p, int obj_id, int inst_is, in
 static int lwm2m_init_server_connection( struct t_lwm2m *p )
 {
   char *s, *e;
+  char is_secure = 0;
   struct t_lwm2m_data item = { .instance = 0, .id = LWM2M_SECURITY_SERVER_URI };
 
   if( !p->init )
@@ -293,6 +294,9 @@ static int lwm2m_init_server_connection( struct t_lwm2m *p )
   s = strchr( s, '/' );
   if( !s || s[1] != '/' )
     return -1;
+
+  is_secure = ( s[-2] == 's' );
+
   s += 2;
 
   e = strchr( s, ':' );
@@ -301,7 +305,7 @@ static int lwm2m_init_server_connection( struct t_lwm2m *p )
 
   *e++ = '\0';
 
-  if( p->init( s,  _strtoi( e ) ) < 0 )
+  if( p->init( s,  _strtoi( e ), is_secure ) < 0 )
     return -1;
 
   return 0;

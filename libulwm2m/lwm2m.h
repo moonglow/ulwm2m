@@ -99,7 +99,7 @@ struct t_lwm2m
   uint16_t mem_size;
   /* transport */
   struct t_coap_packet coap;
-  int (*init)( char *psz_host, int port );
+  int (*init)( char *psz_host, int port, int is_secure );
   int (*recv)( uint8_t *data, int size, int timeout );
   int (*send)( uint8_t *data, int size );
 };
