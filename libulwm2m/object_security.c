@@ -9,7 +9,7 @@
 
 static char sz_server_uri[48] =
 {
-  "coap://leshan.eclipseprojects.io:5683"
+  "coaps://leshan.eclipseprojects.io:5684"
 };
 
 static uint8_t  bootstrap_server = 0;
