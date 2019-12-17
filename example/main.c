@@ -19,7 +19,6 @@ static dtls_handler_t cb;
 static dtls_context_t *dtls_context = NULL;
 static session_t session = { 0 };
 int    secure_connection = 0;
-int    shared_mem_size = 0;
 #endif
 
 static uint32_t udp_ip = 0;
@@ -95,7 +94,7 @@ int network_recv( uint8_t *data, int size, int timeout )
 {
 #ifdef WITH_DTLS
   if( secure_connection )
-    return shared_mem_size;
+    return 0; /* no raw data */
   else
 #endif
     return udp_recv( 0, 0, data, size, timeout );
@@ -189,9 +188,7 @@ static int input_from_peer( struct dtls_context_t *p, session_t *s, uint8_t *d, 
 
   memcpy( lwm2m.mem, d, l );
 
-  shared_mem_size = l;
-
-  if( lwm2m_process( &lwm2m, LWM2M_EVENT_RX, udp_timestamp() ) < 0 )
+  if( lwm2m_process( &lwm2m, LWM2M_SET_EVENT_ARG( LWM2M_EVENT_RX, l ), udp_timestamp() ) < 0 )
     return -1;
 
   return 0;
