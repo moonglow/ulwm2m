@@ -74,6 +74,9 @@
 #define LWM2M_EVENT_IDLE                      2
 #define LWM2M_EVENT_RESET                     3
 
+#define LWM2M_GET_EVENT_ID( event )                 (event&0xFF)
+#define LWM2M_GET_EVENT_ARG( event )                (event>>8)
+#define LWM2M_SET_EVENT_ARG( evid, arg )            (((arg&0xFFFFFF)<<8)|(evid&0xFF))
 #define LWM2M_SET_INSTANCE( _x )                    ((1u<<_x)-1u)
 
 struct t_lwm2m_data

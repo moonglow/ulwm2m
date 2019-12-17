@@ -633,23 +633,26 @@ static int lwm2m_server_simple_response( struct t_lwm2m *p, int code )
   return lwm2m_send_coap_msg( p );
 }
 
-static int lwm2m_recv_packet( struct t_lwm2m *p, int timeout )
+static int lwm2m_recv_packet( struct t_lwm2m *p, int timeout, int data_size )
 {
-  int res;
-  res = p->recv( p->mem, p->mem_size, timeout );
-  if( res < 0 )
-    return -1;
-  if( res == 0 )
-    return 0;
+  /*  no data ?*/
+  if( !data_size )
+  {
+    data_size = p->recv(p->mem, p->mem_size, timeout);
+    if(data_size < 0)
+      return -1;
+    if(data_size == 0)
+      return 0;
+  }
 
-  res = coap_read_packet( &p->coap, p->mem, res );
-  if( res < 0 )
+  data_size = coap_read_packet( &p->coap, p->mem, data_size );
+  if( data_size < 0 )
     return -1;
 
 #ifdef COAP_DBG_PRINT_PACKET
   (void)coap_print_packet( &p->coap );
 #endif
-  return res;
+  return data_size;
 }
 
 static int lwm2m_tlv_walker(struct t_lwm2m_data *p_item, uint8_t *data, int size )
@@ -854,7 +857,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
   int res;
   struct t_lwm2m_data item = {0 };
 
-  switch( event )
+  switch( LWM2M_GET_EVENT_ID( event ) )
   {
     case LWM2M_EVENT_IDLE:
       switch( p->state )
@@ -899,7 +902,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
       }
     break;
     case LWM2M_EVENT_RX:
-      res = lwm2m_recv_packet( p, 1000 );
+      res = lwm2m_recv_packet( p, 1000, LWM2M_GET_EVENT_ARG( event ) );
       if( res <= 0 )
         break;
 
