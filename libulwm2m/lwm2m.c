@@ -30,6 +30,13 @@ enum
   WAIT_NOTHING,
 };
 
+static int lwm2m_event_stub( struct t_lwm2m *p, int event )
+{
+  (void)p;
+  (void)event;
+  return 0;
+}
+
 int lwm2m_init( struct t_lwm2m *p, struct t_lwm2m_obj *obj_llist, uint8_t *mem, uint16_t size )
 {
   memset( p, 0x00, sizeof( struct t_lwm2m ) );
@@ -38,6 +45,7 @@ int lwm2m_init( struct t_lwm2m *p, struct t_lwm2m_obj *obj_llist, uint8_t *mem, 
   p->mem = mem;
   p->mem_size = size;
   p->state = INIT_CONN;
+  p->event = lwm2m_event_stub;
   return 0;
 }
 
@@ -458,9 +466,20 @@ static int lwm2m_process_reg_ack( struct t_lwm2m *p )
     return -1;
 
   /* COAP_CREATED  or COAP_CHANGED */
-  if( p->coap.rr_code != COAP_SET_CODE( COAP_201_CREATED ) )
+  switch( p->coap.rr_code )
   {
-    if( p->coap.rr_code != COAP_SET_CODE( COAP_204_CHANGED ) )
+    case COAP_SET_CODE( COAP_201_CREATED ):
+      p->event( p, LWM2M_EVENT_DEVICE_CREATE );
+      break;
+    case COAP_SET_CODE( COAP_204_CHANGED ):
+      p->event( p, LWM2M_EVENT_DEVICE_UPDATE );
+      break;
+    default:
+    case COAP_SET_CODE( COAP_403_FORBIDDEN ):
+      p->event( p, LWM2M_EVENT_DEVICE_DENIED );
+      return -1;
+    case COAP_SET_CODE( COAP_404_NOT_FOUND ):
+      p->event( p, LWM2M_EVENT_DEVICE_NOT_FOUND );
       return -1;
   }
 
@@ -859,6 +878,9 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
 
   switch( LWM2M_GET_EVENT_ID( event ) )
   {
+    case LWM2M_EVENT_RESET:
+      p->state = INIT_CONN;
+    break;
     case LWM2M_EVENT_IDLE:
       switch( p->state )
       {
@@ -895,6 +917,14 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           regt *= 1000u; /* to mS */
           if( (timestamp - p->reg_timestamp ) < regt )
             break;
+
+          /*  no reg ack ? */
+          if( p->state == WAIT_RD_ACK )
+          {
+            if( p->event( p, LWM2M_EVENT_REGISTRATION_TIMEOUT ) < 0 )
+              return -1;
+          }
+
           p->state = ( p->state  == WAIT_RD_ACK )? POST_RD: POST_UPDATE_RD;
           p->reg_timestamp = timestamp;
         }
@@ -913,10 +943,7 @@ int lwm2m_process( struct t_lwm2m *p, int event, uint32_t timestamp )
           {
             res = lwm2m_process_reg_ack( p );
             if(res < 0)
-            {
-              p->state = POST_RD;
               break;
-            }
             p->state = WAIT_NOTHING;
           }
           break;

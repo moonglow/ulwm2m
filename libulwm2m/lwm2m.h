@@ -73,6 +73,12 @@
 #define LWM2M_EVENT_RX                        1
 #define LWM2M_EVENT_IDLE                      2
 #define LWM2M_EVENT_RESET                     3
+#define LWM2M_EVENT_REGISTRATION_TIMEOUT      4
+#define LWM2M_EVENT_DEVICE_CREATE             5
+#define LWM2M_EVENT_DEVICE_UPDATE             6
+#define LWM2M_EVENT_DEVICE_NOT_FOUND          7
+#define LWM2M_EVENT_DEVICE_DENIED             8
+#define LWM2M_EVENT_SERVER_OBSERVE            9
 
 #define LWM2M_GET_EVENT_ID( event )                 (event&0xFF)
 #define LWM2M_GET_EVENT_ARG( event )                (event>>8)
@@ -105,6 +111,7 @@ struct t_lwm2m
   int (*init)( char *psz_host, int port, int is_secure );
   int (*recv)( uint8_t *data, int size, int timeout );
   int (*send)( uint8_t *data, int size );
+  int (*event)( struct t_lwm2m *p, int event );
 };
 
 struct t_lwm2m_observe_storage
