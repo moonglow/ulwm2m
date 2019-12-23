@@ -236,8 +236,8 @@ static int get_psk_info( struct dtls_context_t *ctx, const session_t *session,
   return dtls_alert_fatal_create( DTLS_ALERT_INTERNAL_ERROR );
 }
 
-static int dtls_event(struct dtls_context_t *ctx, session_t *session, 
-		dtls_alert_level_t level, unsigned short code)
+static int dtls_event(struct dtls_context_t *ctx, session_t *session,
+                      dtls_alert_level_t level, unsigned short code)
 {
 
   (void)ctx;
@@ -247,8 +247,8 @@ static int dtls_event(struct dtls_context_t *ctx, session_t *session,
   switch( code )
   {
     case DTLS_EVENT_CONNECTED:
-      /* TODO: very bad way to restart connection */
-      lwm2m.state = 0;
+      /* restart registration over secure link */
+      lwm2m_process( &lwm2m, LWM2M_EVENT_RESET, udp_timestamp() );
       LOG_OUTPUT( "+DTLS_EVENT_CONNECTED\n" );
       break;
   }
