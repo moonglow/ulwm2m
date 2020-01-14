@@ -85,8 +85,10 @@ int network_send( uint8_t *data, int size )
   return udp_send( udp_ip, udp_port, data, size );
 }
 
-int network_init( char *psz_host, int port )
+int network_init( char *psz_host, int port, int is_secure )
 {
+  (void)is_secure;
+
   udp_exit();
 
   udp_init( 0 );
