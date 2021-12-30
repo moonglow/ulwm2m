@@ -14,3 +14,7 @@ LIMITS:
 * Up to **31** instances per object
 * TLV data encoding scheme only
 * No strict protocol implementation
+
+#### Support me
+- <a href="https://www.patreon.com/bePatron?u=58145249" data-patreon-widget-type="become-patron-button">Become a Patron!</a>
+- **Bitcoin (P2WPKH):** bc1qstnsjqu2kw9v2axens54ycegn3stwvluq7ze5j
